@@ -1,15 +1,22 @@
 package com.smartfoo.android.core.logging
 
 import com.smartfoo.android.core.FooReflection
+import kotlin.reflect.KClass
 
 object FooLog {
+    private val TAG = TAG(FooLog::class)
+
     @Suppress("FunctionName")
     @JvmStatic
     fun TAG(o: Any): String = TAG(o.javaClass)
 
     @Suppress("FunctionName")
     @JvmStatic
-    fun TAG(c: Class<*>): String = TAG(FooReflection.getShortClassName(c)!!)
+    fun TAG(c: KClass<*>): String = TAG(c.java)
+
+    @Suppress("FunctionName")
+    @JvmStatic
+    fun TAG(c: Class<*>): String = TAG(FooReflection.getShortClassName(c))
 
     /**
      * Per https://developer.android.com/reference/android/util/Log.html#isLoggable(java.lang.String,%20int)

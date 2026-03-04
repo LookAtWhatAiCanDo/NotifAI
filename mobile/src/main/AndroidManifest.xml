@@ -63,9 +63,11 @@
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
+            <!--
             <meta-data
                 android:name="android.service.notification.default_filter_types"
                 android:value="conversations" />
+            -->
             <meta-data
                 android:name="android.app.SERVICE_SETTINGS"
                 android:resource="@xml/notification_listener_service_meta" />

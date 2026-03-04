@@ -2,24 +2,40 @@ package llc.lookatwhataicando.notifai
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -29,23 +45,27 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
+import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.smartfoo.android.core.logging.FooLog
+import com.smartfoo.android.core.notification.FooNotification
+import com.smartfoo.android.core.permission.FooPermission
 import llc.lookatwhataicando.notifai.startup.Advisory
 import llc.lookatwhataicando.notifai.startup.Requirement
 import llc.lookatwhataicando.notifai.startup.StartupCoordinator
 import llc.lookatwhataicando.notifai.startup.StartupSnapshot
 import llc.lookatwhataicando.notifai.startup.StartupState
 import llc.lookatwhataicando.notifai.ui.theme.NotifAITheme
-import com.smartfoo.android.core.logging.FooLog
-import com.smartfoo.android.core.notification.FooNotification
-import com.smartfoo.android.core.permission.FooPermission
 
 /**
  * Responsibilities:
@@ -56,7 +76,7 @@ import com.smartfoo.android.core.permission.FooPermission
  */
 class MainActivity : ComponentActivity() {
     companion object {
-        private val TAG = FooLog.TAG(MainActivity::class)
+        //private val TAG = FooLog.TAG(MainActivity::class)
 
         private const val ACTION_PIN = "llc.lookatwhataicando.notifai.MainActivity.action.PIN"
 
@@ -119,18 +139,25 @@ fun AppRoot(coordinator: StartupCoordinator) {
         is StartupState.Result -> {
             val snapshot = (state as StartupState.Result).snapshot
             when {
-                // Shouldn't occur (Result always has evaluated=true) but
-                // guard defensively so splash logic stays correct.
-                !snapshot.evaluated -> Unit
-                // One or more hard requirements are missing.
-                snapshot.missing.isNotEmpty() -> PermissionsGateScreen(snapshot, coordinator)
-                // All requirements met. Advisory items may still be shown
-                // inside OperationalScreen as non-blocking recommendations.
-                else -> OperationalScreen(snapshot, coordinator)
+                !snapshot.evaluated -> {
+                    // Shouldn't occur (Result always has evaluated=true) but
+                    // guard defensively so splash logic stays correct.
+                }
+                snapshot.missing.isNotEmpty() -> {
+                    // One or more hard requirements are missing.
+                    PermissionsGateScreen(snapshot, coordinator)
+                }
+                else -> {
+                    // All requirements met. Advisory items may still be shown
+                    // inside OperationalScreen as non-blocking recommendations.
+                    OperationalScreen(snapshot, coordinator)
+                }
             }
         }
     }
 }
+
+// ── Screen ───────────────────────────────────────────────────────────
 
 /**
  * Hard-requirement cards use filled Button  (primary visual weight).
@@ -153,6 +180,8 @@ fun PermissionsGateScreen(
     val forceShowAdvisories = false
 
     val context = LocalContext.current
+    val colors = MaterialTheme.colorScheme
+    val type = MaterialTheme.typography
 
     val postNotifLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -164,58 +193,94 @@ fun PermissionsGateScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(colors.background)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(top = 56.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        Text("Setup Required", style = MaterialTheme.typography.headlineMedium)
+        // ── Header ───────────────────────────────────────────────────
+        Text(
+            text = "Setup Required",
+            style = type.headlineLarge.copy(fontWeight = FontWeight.Bold),
+            color = colors.onBackground
+        )
         Spacer(Modifier.height(8.dp))
         Text(
             text = "This app runs as a Notification Listener foreground service. " +
                     "The following ${if (snapshot.missing.size > 1) "permissions are" else "permission is"} " +
                     "required before it can start.",
-            style = MaterialTheme.typography.bodyMedium
+            style = type.bodyMedium,
+            color = colors.onSurfaceVariant,
+            lineHeight = 22.sp
         )
-        Spacer(Modifier.height(24.dp))
-        // ── Hard requirements ────────────────────────────────────────
-        if (Requirement.POST_NOTIFICATIONS in snapshot.missing) {
-            RequirementCard(
-                title = "Post Notifications",
-                description = "Required to post the persistent foreground-service notification.",
-                primaryText = "Grant",
-                onPrimary = { FooNotification.requestPostNotifications(postNotifLauncher) },
-                secondaryText = "Application Notification Settings",
-                onSecondary = { FooNotification.startActivityAppNotificationSettings(context) }
+        Spacer(Modifier.height(32.dp))
+        // ── Section label: Required ───────────────────────────────────
+        SectionLabel(
+            text  = "REQUIRED",
+            color = colors.error
+        )
+        Spacer(Modifier.height(12.dp))
+        // ── POST_NOTIFICATIONS card ──────────────────────────────────
+        val postMissing = Requirement.POST_NOTIFICATIONS in snapshot.missing
+        RequirementCard(
+            icon        = Icons.Outlined.Notifications,
+            title       = "Post Notifications",
+            description = "Required to display the persistent foreground-service notification.",
+            isMissing   = postMissing,
+            primaryAction = if (postMissing) PermissionAction(
+                label   = "Grant Permission",
+                onClick = { FooNotification.requestPostNotifications(postNotifLauncher) }
+            ) else null,
+            secondaryAction = PermissionAction(
+                label   = "Application Notification Settings",
+                onClick = { FooNotification.startActivityAppNotificationSettings(context) }
             )
-        }
-        if (Requirement.NOTIFICATION_LISTENER in snapshot.missing) {
-            RequirementCard(
-                title = "Notification Listener Access",
-                description = "Required to read notifications via NotificationListenerService. " +
-                        "Enable the `NotifAI` app in the list that opens.",
-                primaryText = "Notification read, reply & control",
-                onPrimary = { FooNotification.startActivityNotificationListenerSettings(context) }
-            )
-        }
-        // ── Advisories (visible here too — user can action before entering app) ──
-        if (forceShowAdvisories || snapshot.advisories.isNotEmpty()) {
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
-            Text("Recommended", style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(8.dp))
-        }
+        )
+        Spacer(Modifier.height(12.dp))
+        // ── NOTIFICATION_LISTENER card ───────────────────────────────
+        val listenerMissing = Requirement.NOTIFICATION_LISTENER in snapshot.missing
+        RequirementCard(
+            icon        = Icons.Outlined.Lock,
+            title       = "Notification Listener",
+            description = "Required to read notifications. " +
+                    "Enable `NotifAI` in the list that opens.",
+            isMissing   = listenerMissing,
+            primaryAction = if (listenerMissing) PermissionAction(
+                label   = "Notification read, reply, & control",
+                onClick = { FooNotification.startActivityNotificationListenerSettings(context) }
+            ) else null
+        )
+        // ── Section label: Recommended ────────────────────────────────
         if (forceShowAdvisories || Advisory.BATTERY_OPTIMIZATION in snapshot.advisories) {
-            AdvisoryCard(
-                title = "Ignore Battery Optimizations",
-                description = "Helps keep the service alive on OEMs with aggressive battery management " +
-                        "(Samsung, Xiaomi, OnePlus, etc). Not required, but strongly recommended.",
-                buttonText = "Request Exemption",
-                onClick = { FooPermission.startActivityIgnoreBatteryOptimizations(context) }
+            Spacer(Modifier.height(32.dp))
+            HorizontalDivider(color = colors.outlineVariant)
+            Spacer(Modifier.height(24.dp))
+            SectionLabel(
+                text  = "RECOMMENDED",
+                color = colors.tertiary  // amber in our scheme
             )
+            Spacer(Modifier.height(12.dp))
+            AdvisoryIgnoresBatteryOptimizations()
         }
     }
 }
+
+@Composable
+fun AdvisoryIgnoresBatteryOptimizations() {
+    val context = LocalContext.current
+    AdvisoryCard(
+        icon        = Icons.Outlined.Warning,
+        title       = "Ignore Battery Optimizations",
+        description = "Helps keep the app alive on OEMs with aggressive battery management " +
+                "(Samsung, Xiaomi, OnePlus, etc). Not required, but strongly recommended.",
+        action      = PermissionAction(
+            label   = "Request Exemption",
+            onClick = { FooPermission.startActivityIgnoreBatteryOptimizations(context) }
+        )
+    )
+}
+
 
 /**
  * By the time we reach here:
@@ -237,12 +302,9 @@ fun OperationalScreen(
 ) {
     val context = LocalContext.current
 
-    // Start FGS once, only when this screen is first composed (i.e. isReady)
     LaunchedEffect(Unit) {
-        ContextCompat.startForegroundService(
-            context,
-            Intent(context, MyNotificationListenerService::class.java)
-        )
+        MyForegroundNotificationService.start(context)
+        MyNotificationListenerService.requestNotificationListenerRebind(context)
     }
 
     Column(
@@ -265,13 +327,7 @@ fun OperationalScreen(
             Text("Recommended", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
             if (Advisory.BATTERY_OPTIMIZATION in snapshot.advisories) {
-                AdvisoryCard(
-                    title       = "Battery Optimization Exemption",
-                    description = "Recommended for reliable background operation, especially on Samsung, " +
-                            "Xiaomi, and OnePlus devices.",
-                    buttonText  = "Request Exemption",
-                    onClick     = { FooPermission.startActivityIgnoreBatteryOptimizations(context) }
-                )
+                AdvisoryIgnoresBatteryOptimizations()
             }
         }
         Spacer(Modifier.height(24.dp))
@@ -282,6 +338,22 @@ fun OperationalScreen(
     }
 }
 
+// ── Components ───────────────────────────────────────────────────────
+
+data class PermissionAction(val label: String, val onClick: () -> Unit)
+
+@Composable
+private fun SectionLabel(text: String, color: Color) {
+    Text(
+        text  = text,
+        style = MaterialTheme.typography.labelSmall.copy(
+            fontWeight   = FontWeight.Bold,
+            letterSpacing = 1.5.sp
+        ),
+        color = color
+    )
+}
+
 /**
  * Card for a hard Requirement.
  * Filled primary Button signals "you must do this".
@@ -289,34 +361,91 @@ fun OperationalScreen(
  */
 @Composable
 private fun RequirementCard(
+    icon: ImageVector,
     title: String,
     description: String,
-    primaryText: String,
-    onPrimary: () -> Unit,
-    secondaryText: String? = null,
-    onSecondary: (() -> Unit)? = null
+    isMissing: Boolean,
+    primaryAction: PermissionAction?,
+    secondaryAction: PermissionAction? = null,
 ) {
+    val colors = MaterialTheme.colorScheme
+
+    // Border pulses red when missing, subtle when satisfied
+    val borderColor = if (isMissing) colors.error.copy(alpha = 0.5f)
+    else colors.outline.copy(alpha = 0.3f)
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
+        modifier = Modifier.fillMaxWidth(),
+        shape    = RoundedCornerShape(16.dp),
+        border   = BorderStroke(1.dp, borderColor),
+        colors   = CardDefaults.cardColors(
+            containerColor = colors.surfaceContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
+        Column(modifier = Modifier.padding(20.dp)) {
+            // Title row with icon + status chip
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isMissing) colors.error else colors.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text  = title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = colors.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                StatusChip(granted = !isMissing)
+            }
+            Spacer(Modifier.height(10.dp))
             Text(
-                description,
+                text  = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = colors.onSurfaceVariant,
+                lineHeight = 20.sp
             )
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = onPrimary) {
-                    Text(primaryText)
-                }
-                if (secondaryText != null && onSecondary != null) {
-                    OutlinedButton(onClick = onSecondary) {
-                        Text(secondaryText)
+            if (primaryAction != null || secondaryAction != null) {
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    primaryAction?.let {
+                        Button(
+                            onClick = it.onClick,
+                            shape   = RoundedCornerShape(10.dp),
+                            colors  = ButtonDefaults.buttonColors(
+                                containerColor = if (isMissing) colors.primary else colors.secondaryContainer,
+                                contentColor   = if (isMissing) colors.onPrimary else colors.onSecondaryContainer
+                            ),
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+                        ) {
+                            Text(
+                                it.label,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+                    secondaryAction?.let {
+                        OutlinedButton(
+                            onClick = it.onClick,
+                            shape   = RoundedCornerShape(10.dp),
+                            border  = BorderStroke(1.dp, colors.outline), // explicit — never invisible
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                        ) {
+                            Text(
+                                it.label,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = colors.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -330,31 +459,95 @@ private fun RequirementCard(
  */
 @Composable
 private fun AdvisoryCard(
+    icon: ImageVector,
     title: String,
     description: String,
-    buttonText: String,
-    onClick: () -> Unit
+    action: PermissionAction,
 ) {
+    val colors = MaterialTheme.colorScheme
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        modifier = Modifier.fillMaxWidth(),
+        shape    = RoundedCornerShape(16.dp),
+        border   = BorderStroke(1.dp, colors.tertiary.copy(alpha = 0.35f)),
+        colors   = CardDefaults.cardColors(
+            // Slightly warmer surface to visually distinguish from requirement cards
+            containerColor = colors.tertiaryContainer.copy(alpha = 0.15f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = colors.tertiary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text  = title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = colors.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(Modifier.height(10.dp))
             Text(
-                description,
+                text  = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = colors.onSurfaceVariant,
+                lineHeight = 20.sp
             )
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = onClick) {
-                Text(buttonText)
+            Spacer(Modifier.height(16.dp))
+            // OutlinedButton with amber/tertiary tint for advisory actions
+            OutlinedButton(
+                onClick = action.onClick,
+                shape   = RoundedCornerShape(10.dp),
+                border  = BorderStroke(1.dp, colors.tertiary),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    action.label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = colors.tertiary
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun StatusChip(granted: Boolean) {
+    val colors = MaterialTheme.colorScheme
+
+    val chipColor = if (granted) colors.primaryContainer else colors.errorContainer
+    val textColor = if (granted) colors.onPrimaryContainer else colors.onErrorContainer
+    val label     = if (granted) "Granted" else "Missing"
+
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(chipColor)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        if (granted) {
+            Icon(
+                imageVector = Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = textColor,
+                modifier = Modifier.size(12.dp)
+            )
+        }
+        Text(
+            text  = label,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+            color = textColor
+        )
     }
 }
