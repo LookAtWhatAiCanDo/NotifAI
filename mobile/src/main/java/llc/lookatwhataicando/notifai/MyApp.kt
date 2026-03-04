@@ -2,11 +2,12 @@ package llc.lookatwhataicando.notifai
 
 import android.app.Application
 import android.util.Log
+import llc.lookatwhataicando.notifai.util.MyLogUtils
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MyApp : Application() {
     companion object {
-        private const val TAG = "MyApp"
+        private val TAG = MyLogUtils.TAG(MyApp::class)
     }
 
     private val isShutdown = AtomicBoolean(false)

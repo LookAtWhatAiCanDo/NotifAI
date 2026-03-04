@@ -3,6 +3,7 @@ package llc.lookatwhataicando.notifai
 import android.app.ActivityManager
 import android.content.Context
 import android.util.Log
+import llc.lookatwhataicando.notifai.util.MyLogUtils
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.system.exitProcess
 
@@ -12,7 +13,8 @@ import kotlin.system.exitProcess
  * and finally the process exits so no background components linger.
  */
 object AppShutdownManager {
-    private const val TAG = "AppShutdownManager"
+    private val TAG = MyLogUtils.TAG(AppShutdownManager::class)
+
     private val quitting = AtomicBoolean(false)
     private val shutdownPrepared = AtomicBoolean(false)
 

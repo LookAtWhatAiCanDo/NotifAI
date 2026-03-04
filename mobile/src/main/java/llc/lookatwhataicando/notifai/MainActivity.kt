@@ -43,6 +43,7 @@ import llc.lookatwhataicando.notifai.startup.StartupCoordinator
 import llc.lookatwhataicando.notifai.startup.StartupSnapshot
 import llc.lookatwhataicando.notifai.startup.StartupState
 import llc.lookatwhataicando.notifai.ui.theme.NotifAITheme
+import llc.lookatwhataicando.notifai.util.MyLogUtils
 import llc.lookatwhataicando.notifai.util.MyNotificationUtils
 import llc.lookatwhataicando.notifai.util.MyPermissionUtils
 
@@ -55,7 +56,7 @@ import llc.lookatwhataicando.notifai.util.MyPermissionUtils
  */
 class MainActivity : ComponentActivity() {
     companion object {
-        private const val TAG = "MainActivity"
+        private val TAG = MyLogUtils.TAG(MainActivity::class)
 
         private const val ACTION_PIN = "llc.lookatwhataicando.notifai.MainActivity.action.PIN"
 

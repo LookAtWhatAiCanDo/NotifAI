@@ -2,6 +2,7 @@ package llc.lookatwhataicando.notifai.util
 
 import android.Manifest
 import android.app.Notification
+import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
@@ -14,7 +15,35 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.core.content.ContextCompat
 
 object MyNotificationUtils {
-    private val TAG = "MyNotificationUtils"
+    private val TAG = MyLogUtils.TAG(MyNotificationUtils::class)
+
+    fun notificationCancelReasonToString(reason: Int): String =
+        when (reason) {
+            NotificationListenerService.REASON_CLICK -> "REASON_CLICK"
+            NotificationListenerService.REASON_CANCEL -> "REASON_CANCEL"
+            NotificationListenerService.REASON_CANCEL_ALL -> "REASON_CANCEL_ALL"
+            NotificationListenerService.REASON_ERROR -> "REASON_ERROR"
+            NotificationListenerService.REASON_PACKAGE_CHANGED -> "REASON_PACKAGE_CHANGED"
+            NotificationListenerService.REASON_USER_STOPPED -> "REASON_USER_STOPPED"
+            NotificationListenerService.REASON_PACKAGE_BANNED -> "REASON_PACKAGE_BANNED"
+            NotificationListenerService.REASON_APP_CANCEL -> "REASON_APP_CANCEL"
+            NotificationListenerService.REASON_APP_CANCEL_ALL -> "REASON_APP_CANCEL_ALL"
+            NotificationListenerService.REASON_LISTENER_CANCEL -> "REASON_LISTENER_CANCEL"
+            NotificationListenerService.REASON_LISTENER_CANCEL_ALL -> "REASON_LISTENER_CANCEL_ALL"
+            NotificationListenerService.REASON_GROUP_SUMMARY_CANCELED -> "REASON_GROUP_SUMMARY_CANCELED"
+            NotificationListenerService.REASON_GROUP_OPTIMIZATION -> "REASON_GROUP_OPTIMIZATION"
+            NotificationListenerService.REASON_PACKAGE_SUSPENDED -> "REASON_PACKAGE_SUSPENDED"
+            NotificationListenerService.REASON_PROFILE_TURNED_OFF -> "REASON_PROFILE_TURNED_OFF"
+            NotificationListenerService.REASON_UNAUTOBUNDLED -> "REASON_UNAUTOBUNDLED"
+            NotificationListenerService.REASON_CHANNEL_BANNED -> "REASON_CHANNEL_BANNED"
+            NotificationListenerService.REASON_SNOOZED -> "REASON_SNOOZED"
+            NotificationListenerService.REASON_TIMEOUT -> "REASON_TIMEOUT"
+            NotificationListenerService.REASON_CHANNEL_REMOVED -> "REASON_CHANNEL_REMOVED"
+            NotificationListenerService.REASON_CLEAR_DATA -> "REASON_CLEAR_DATA"
+            NotificationListenerService.REASON_ASSISTANT_CANCEL -> "REASON_ASSISTANT_CANCEL"
+            NotificationListenerService.REASON_LOCKDOWN -> "REASON_LOCKDOWN"
+            else -> "UNKNOWN"
+        }.let { "$it($reason)" }
 
     @JvmStatic
     fun intentAppNotificationSettings(context: Context) =
@@ -204,5 +233,15 @@ object MyNotificationUtils {
         }.onFailure { throwable ->
             Log.w(TAG, "requestNotificationListenerRebind: failed", throwable)
         }
+    }
+
+    @JvmStatic
+    fun getNotificationChannel(
+        context: Context,
+        notification: Notification,
+    ): NotificationChannel? {
+        val channelId = notification.channelId ?: return null
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        return notificationManager.getNotificationChannel(channelId)
     }
 }

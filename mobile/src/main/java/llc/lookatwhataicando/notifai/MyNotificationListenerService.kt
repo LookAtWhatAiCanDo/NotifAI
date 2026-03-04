@@ -1,14 +1,22 @@
 package llc.lookatwhataicando.notifai
 
+import android.app.NotificationChannel
+import android.app.NotificationChannelGroup
 import android.content.Context
+import android.os.UserHandle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import llc.lookatwhataicando.notifai.util.MyLogUtils
 import llc.lookatwhataicando.notifai.util.MyNotificationUtils
+import llc.lookatwhataicando.notifai.util.MyStringUtils
 
 class MyNotificationListenerService : NotificationListenerService() {
     companion object {
-        private const val TAG = "MyNotificationListenerService"
+        private val TAG = MyLogUtils.TAG(MyNotificationListenerService::class)
+
+        @Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions", "RedundantSuppression", "UNREACHABLE_CODE")
+        private val LOG_NOTIFICATION = true && BuildConfig.DEBUG
 
         fun isNotificationListenerEnabled(context: Context) =
             MyNotificationUtils.isNotificationListenerEnabled(context, MyNotificationListenerService::class.java)
@@ -34,13 +42,109 @@ class MyNotificationListenerService : NotificationListenerService() {
         Log.d(TAG, "-onDestroy()")
     }
 
-    override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        Log.d(TAG, "onNotificationPosted(sbn=$sbn)")
-        // Handle incoming notifications
+    private val activeNotificationsSnapshot = ActiveNotificationsSnapshot(this)
+
+    private fun getActiveNotificationsSnapshot() = activeNotificationsSnapshot.snapshot(this)
+
+    fun initializeActiveNotifications() {
+        val activeNotificationsSnapshot = getActiveNotificationsSnapshot()
+        initializeActiveNotifications(activeNotificationsSnapshot)
     }
 
-    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        Log.d(TAG, "onNotificationRemoved(sbn=$sbn)")
-        // Handle removed notifications
+    private fun initializeActiveNotifications(activeNotificationsSnapshot: ActiveNotificationsSnapshot) {
+        if (LOG_NOTIFICATION) {
+            Log.d(TAG, "#NOTIFICATION initializeActiveNotifications(activeNotificationsSnapshot(${activeNotificationsSnapshot.activeNotifications?.size}))")
+        }
+        for (activeNotification in activeNotificationsSnapshot.activeNotificationsRanked.orEmpty()) {
+            Log.v(TAG, "#NOTIFICATION initializeActiveNotifications: activeNotification=$activeNotification")
+            onNotificationPosted(activeNotification, activeNotificationsSnapshot.currentRanking)
+        }
+    }
+
+    override fun onListenerConnected() {
+        if (LOG_NOTIFICATION) {
+            Log.d(TAG, "#NOTIFICATION onListenerConnected()")
+        }
+        super.onListenerConnected()
+        initializeActiveNotifications()
+    }
+
+    override fun onListenerDisconnected() {
+        if (LOG_NOTIFICATION) {
+            Log.d(TAG, "#NOTIFICATION onListenerDisconnected()")
+        }
+        super.onListenerDisconnected()
+    }
+
+    override fun onNotificationPosted(sbn: StatusBarNotification?, rankingMap: RankingMap?) {
+        if (LOG_NOTIFICATION) {
+            Log.d(TAG, "#NOTIFICATION onNotificationPosted(sbn=$sbn, rankingMap=$rankingMap)")
+        }
+        super.onNotificationPosted(sbn, rankingMap)
+        // TODO: Handle incoming notification...
+    }
+
+    override fun onNotificationRemoved(
+        sbn: StatusBarNotification?,
+        rankingMap: RankingMap?,
+        reason: Int
+    ) {
+        if (LOG_NOTIFICATION) {
+            Log.d(TAG, "#NOTIFICATION onNotificationRemoved(sbn=$sbn, rankingMap=$rankingMap, reason=${MyStringUtils.quote(MyNotificationUtils.notificationCancelReasonToString(reason))})")
+        }
+        super.onNotificationRemoved(sbn, rankingMap, reason)
+        // TODO: Handle removed notification...
+    }
+
+    override fun onNotificationRankingUpdate(rankingMap: RankingMap?) {
+        if (LOG_NOTIFICATION) {
+            Log.v(TAG, "#NOTIFICATION onNotificationRankingUpdate(...)")
+        }
+        super.onNotificationRankingUpdate(rankingMap)
+    }
+
+    override fun onListenerHintsChanged(hints: Int) {
+        if (LOG_NOTIFICATION) {
+            Log.v(TAG, "#NOTIFICATION onListenerHintsChanged(...)")
+        }
+        super.onListenerHintsChanged(hints)
+    }
+
+    override fun onSilentStatusBarIconsVisibilityChanged(hideSilentStatusIcons: Boolean) {
+        if (LOG_NOTIFICATION) {
+            Log.v(TAG, "#NOTIFICATION onSilentStatusBarIconsVisibilityChanged(...)")
+        }
+        super.onSilentStatusBarIconsVisibilityChanged(hideSilentStatusIcons)
+    }
+
+    override fun onNotificationChannelModified(
+        pkg: String?,
+        user: UserHandle?,
+        channel: NotificationChannel?,
+        modificationType: Int,
+    ) {
+        if (LOG_NOTIFICATION) {
+            Log.v(TAG, "#NOTIFICATION onNotificationChannelModified(...)")
+        }
+        super.onNotificationChannelModified(pkg, user, channel, modificationType)
+    }
+
+    override fun onNotificationChannelGroupModified(
+        pkg: String?,
+        user: UserHandle?,
+        group: NotificationChannelGroup?,
+        modificationType: Int,
+    ) {
+        if (LOG_NOTIFICATION) {
+            Log.v(TAG, "#NOTIFICATION onNotificationChannelGroupModified(...)")
+        }
+        super.onNotificationChannelGroupModified(pkg, user, group, modificationType)
+    }
+
+    override fun onInterruptionFilterChanged(interruptionFilter: Int) {
+        if (LOG_NOTIFICATION) {
+            Log.v(TAG, "#NOTIFICATION onInterruptionFilterChanged(...)")
+        }
+        super.onInterruptionFilterChanged(interruptionFilter)
     }
 }

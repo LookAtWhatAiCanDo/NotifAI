@@ -12,12 +12,13 @@ import android.os.IBinder
 import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import llc.lookatwhataicando.notifai.util.MyLogUtils
 import llc.lookatwhataicando.notifai.util.MyNotificationUtils
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MyForegroundNotificationService : Service() {
     companion object {
-        const val TAG = "MyNotificationListenerService"
+        private val TAG = MyLogUtils.TAG(MyNotificationListenerService::class)
 
         private const val NOTIFICATION_ID = 42
 
