@@ -10,7 +10,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import llc.lookatwhataicando.notifai.util.MyNotificationUtils
+import com.smartfoo.android.core.notification.FooNotification
 
 /**
  * Reactive Flow that emits whenever the system's enabled_notification_listeners
@@ -43,7 +43,7 @@ object NotificationListenerEnabledMonitor {
         }
 
         context.contentResolver.registerContentObserver(
-            Settings.Secure.getUriFor(MyNotificationUtils.ENABLED_NOTIFICATION_LISTENERS),
+            Settings.Secure.getUriFor(FooNotification.ENABLED_NOTIFICATION_LISTENERS),
             false,
             observer
         )

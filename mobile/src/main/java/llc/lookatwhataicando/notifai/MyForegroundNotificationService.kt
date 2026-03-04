@@ -12,13 +12,13 @@ import android.os.IBinder
 import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import llc.lookatwhataicando.notifai.util.MyLogUtils
-import llc.lookatwhataicando.notifai.util.MyNotificationUtils
+import com.smartfoo.android.core.logging.FooLog
+import com.smartfoo.android.core.notification.FooNotification
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MyForegroundNotificationService : Service() {
     companion object {
-        private val TAG = MyLogUtils.TAG(MyNotificationListenerService::class)
+        private val TAG = FooLog.TAG(MyNotificationListenerService::class)
 
         private const val NOTIFICATION_ID = 42
 
@@ -54,7 +54,7 @@ class MyForegroundNotificationService : Service() {
         }
 
         fun isOngoingNotificationNoDismiss(context: Context) =
-            MyNotificationUtils.isCallingAppNotificationNoDismiss(context, NOTIFICATION_ID)
+            FooNotification.isCallingAppNotificationNoDismiss(context, NOTIFICATION_ID)
     }
 
     private val app by lazy { application as MyApp }

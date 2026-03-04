@@ -1,10 +1,10 @@
-package llc.lookatwhataicando.notifai.util
+package com.smartfoo.android.core
 
 import android.content.Intent
 import android.os.Bundle
 import java.util.Locale
 
-object MyStringUtils {
+object FooString {
     @JvmField
     val LINEFEED: String? = System.lineSeparator()
 
@@ -35,7 +35,7 @@ object MyStringUtils {
         }
 
         if (typeOnly) {
-            return MyReflectionUtils.getShortClassName(value)
+            return FooReflection.getShortClassName(value)
         }
 
         if (value is String) {
@@ -98,7 +98,7 @@ object MyStringUtils {
 
 
     /**
-     * More useful than [android.content.Intent.toString] that only prints "(has extras)" if there are extras.
+     * More useful than [Intent.toString] that only prints "(has extras)" if there are extras.
      */
     @JvmStatic
     fun toString(intent: Intent?): String {
@@ -111,7 +111,7 @@ object MyStringUtils {
     }
 
     /**
-     * May be unnecessary; [android.os.Bundle]`.toString` output seems almost acceptable nowadays.
+     * May be unnecessary; [Bundle]`.toString` output seems almost acceptable nowadays.
      */
     @JvmStatic
     fun toString(bundle: Bundle?): String {

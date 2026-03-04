@@ -1,4 +1,4 @@
-package llc.lookatwhataicando.notifai.util
+package com.smartfoo.android.core.permission
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -11,7 +11,7 @@ import android.provider.Settings
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 
-object MyPermissionUtils {
+object FooPermission {
     fun isCallStatePermissionGranted(context: Context) =
         ContextCompat
             .checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) ==

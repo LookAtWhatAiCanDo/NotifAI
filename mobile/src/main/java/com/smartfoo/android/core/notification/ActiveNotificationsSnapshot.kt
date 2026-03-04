@@ -1,18 +1,14 @@
-package llc.lookatwhataicando.notifai
+package com.smartfoo.android.core.notification
 
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import android.service.notification.NotificationListenerService
-import android.service.notification.NotificationListenerService.Ranking
-import android.service.notification.NotificationListenerService.RankingMap
 import android.service.notification.StatusBarNotification
 import android.util.Log
-import llc.lookatwhataicando.notifai.util.MyLogUtils
-import llc.lookatwhataicando.notifai.util.MyNotificationUtils
-import llc.lookatwhataicando.notifai.util.MyStringUtils
-import kotlin.text.isNullOrEmpty
-import kotlin.text.substring
+import com.smartfoo.android.core.FooString
+import com.smartfoo.android.core.logging.FooLog
+import llc.lookatwhataicando.notifai.MyNotificationListenerService
 
 /**
  * Holds an immutable snapshot of active notifications and their ranking.
@@ -22,7 +18,7 @@ import kotlin.text.substring
 class ActiveNotificationsSnapshot(
     val context: Context,
 ) {
-    /** Snapshot of the [NotificationListenerService] used at the last [snapshot] call; null after [reset]. */
+    /** Snapshot of the [android.service.notification.NotificationListenerService] used at the last [snapshot] call; null after [reset]. */
     var notificationListenerService: MyNotificationListenerService? = null
         private set
 
@@ -31,7 +27,7 @@ class ActiveNotificationsSnapshot(
         private set
 
     /** Snapshot of the system RankingMap at the last [snapshot] call; null after [reset]. */
-    var currentRanking: RankingMap? = null
+    var currentRanking: NotificationListenerService.RankingMap? = null
         private set
 
     private var _activeNotificationsRanked: List<StatusBarNotification>? = null
@@ -94,14 +90,14 @@ class ActiveNotificationsSnapshot(
         val template = extras?.getString(Notification.EXTRA_TEMPLATE)
         // Accept framework or compat styles; the literal string contains '$'
         val isMediaStyle =
-            template?.endsWith("\$MediaStyle") == true ||
+            template?.endsWith($$"$MediaStyle") == true ||
                     template?.contains("MediaStyle") == true
         return hasMediaSession || isTransport || isMediaStyle
     }
 
     private fun bucketOfWithRank(
         sbn: StatusBarNotification,
-        r: Ranking,
+        r: NotificationListenerService.Ranking,
     ): UiBucket {
         if (isMediaNotificationCompat(sbn.notification)) return UiBucket.MEDIA
         if (r.isConversation) return UiBucket.CONVERSATION
@@ -115,7 +111,7 @@ class ActiveNotificationsSnapshot(
         sbn: StatusBarNotification,
     ): UiBucket {
         val n = sbn.notification
-        val nc = MyNotificationUtils.getNotificationChannel(context, n)
+        val nc = FooNotification.getNotificationChannel(context, n)
         if (isMediaNotificationCompat(n)) return UiBucket.MEDIA
         val importance = nc?.importance ?: NotificationManager.IMPORTANCE_UNSPECIFIED
         // Heuristic: treat importance below as silent when no ranking is available
@@ -126,7 +122,7 @@ class ActiveNotificationsSnapshot(
     private fun shadeSort(
         context: Context,
         actives: List<StatusBarNotification>?,
-        rankingMap: RankingMap?,
+        rankingMap: NotificationListenerService.RankingMap?,
     ): List<StatusBarNotification> {
         val list = actives ?: return emptyList()
         if (list.isEmpty()) return emptyList()
@@ -172,7 +168,7 @@ class ActiveNotificationsSnapshot(
 
             val (bucket, sysIdx) =
                 if (rankingMap != null) {
-                    val r = Ranking()
+                    val r = NotificationListenerService.Ranking()
                     val has = rankingMap.getRanking(sbn.key, r)
                     val b = if (has) bucketOfWithRank(sbn, r) else bucketOfNoRank(context, sbn)
                     val idx = sysOrder[sbn.key] ?: Int.MAX_VALUE
@@ -192,9 +188,10 @@ class ActiveNotificationsSnapshot(
     }
 
     companion object {
-        private val TAG = MyLogUtils.TAG(ActiveNotificationsSnapshot::class)
+        private val TAG = FooLog.TAG(ActiveNotificationsSnapshot::class)
 
-        fun toString(ranking: Ranking): String = "{key=${ranking.key}, rank=${ranking.rank}}"
+        fun toString(ranking: NotificationListenerService.Ranking): String =
+            "{key=${ranking.key}, rank=${ranking.rank}}"
 
         fun toString(
             sbn: StatusBarNotification,
@@ -207,9 +204,10 @@ class ActiveNotificationsSnapshot(
             if (text != null) {
                 text =
                     if (text.length > 33) {
-                        "(${text.length})${MyStringUtils.quote(text.substring(0, 32)).replaceAfterLast("\"", "…\"")}"
+                        "(${text.length})${FooString.quote(text.substring(0, 32))
+                            .replaceAfterLast("\"", "…\"")}"
                     } else {
-                        MyStringUtils.quote(text)
+                        FooString.quote(text)
                     }
             }
             val subText = extras?.getCharSequence(Notification.EXTRA_SUB_TEXT)
@@ -219,20 +217,20 @@ class ActiveNotificationsSnapshot(
                 sb.append("extras={ ")
             }
             if (title != null) {
-                sb.append("${Notification.EXTRA_TITLE}=${MyStringUtils.quote(title)}")
+                sb.append("${Notification.EXTRA_TITLE}=${FooString.quote(title)}")
             }
             if (text != null) {
                 sb.append(", ${Notification.EXTRA_TEXT}=$text")
             }
             if (subText != null) {
-                sb.append(", ${Notification.EXTRA_SUB_TEXT}=${MyStringUtils.quote(subText)}")
+                sb.append(", ${Notification.EXTRA_SUB_TEXT}=${FooString.quote(subText)}")
             }
             if (title != null || text != null || subText != null) {
                 sb.append(" }, ")
             }
             sb.append(
-                "id=${sbn.id}, key=${MyStringUtils.quote(sbn.key)}, packageName=${
-                    MyStringUtils.quote(sbn.packageName)
+                "id=${sbn.id}, key=${FooString.quote(sbn.key)}, packageName=${
+                    FooString.quote(sbn.packageName)
                 }, notification={ $notification",
             )
             if (showAllExtras) {
@@ -242,7 +240,7 @@ class ActiveNotificationsSnapshot(
                     extras.remove(Notification.EXTRA_TEXT)
                     extras.remove(Notification.EXTRA_SUB_TEXT)
                 }
-                sb.append(MyStringUtils.toString(extras))
+                sb.append(FooString.toString(extras))
             }
             sb.append(" } }")
             return sb.toString()

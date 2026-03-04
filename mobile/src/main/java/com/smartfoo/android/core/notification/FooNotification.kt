@@ -1,4 +1,4 @@
-package llc.lookatwhataicando.notifai.util
+package com.smartfoo.android.core.notification
 
 import android.Manifest
 import android.app.Notification
@@ -13,9 +13,10 @@ import android.service.notification.NotificationListenerService
 import android.util.Log
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.core.content.ContextCompat
+import com.smartfoo.android.core.logging.FooLog
 
-object MyNotificationUtils {
-    private val TAG = MyLogUtils.TAG(MyNotificationUtils::class)
+object FooNotification {
+    private val TAG = FooLog.TAG(FooNotification::class)
 
     fun notificationCancelReasonToString(reason: Int): String =
         when (reason) {
@@ -142,12 +143,12 @@ object MyNotificationUtils {
     }
 
     /**
-     * Per hidden field [android.provider.Settings.Secure] `ENABLED_NOTIFICATION_LISTENERS`
+     * Per hidden field [Settings.Secure] `ENABLED_NOTIFICATION_LISTENERS`
      */
     const val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
 
     /**
-     * Similar to API27 [android.app.NotificationManager.isNotificationListenerAccessGranted],
+     * Similar to API27 [NotificationManager.isNotificationListenerAccessGranted],
      * but not limited to "The listener service must belong to the calling app."
      *
      * Similar to calling [androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages]`.contains(context.packageName)`,

@@ -43,9 +43,9 @@ import llc.lookatwhataicando.notifai.startup.StartupCoordinator
 import llc.lookatwhataicando.notifai.startup.StartupSnapshot
 import llc.lookatwhataicando.notifai.startup.StartupState
 import llc.lookatwhataicando.notifai.ui.theme.NotifAITheme
-import llc.lookatwhataicando.notifai.util.MyLogUtils
-import llc.lookatwhataicando.notifai.util.MyNotificationUtils
-import llc.lookatwhataicando.notifai.util.MyPermissionUtils
+import com.smartfoo.android.core.logging.FooLog
+import com.smartfoo.android.core.notification.FooNotification
+import com.smartfoo.android.core.permission.FooPermission
 
 /**
  * Responsibilities:
@@ -56,7 +56,7 @@ import llc.lookatwhataicando.notifai.util.MyPermissionUtils
  */
 class MainActivity : ComponentActivity() {
     companion object {
-        private val TAG = MyLogUtils.TAG(MainActivity::class)
+        private val TAG = FooLog.TAG(MainActivity::class)
 
         private const val ACTION_PIN = "llc.lookatwhataicando.notifai.MainActivity.action.PIN"
 
@@ -183,9 +183,9 @@ fun PermissionsGateScreen(
                 title = "Post Notifications",
                 description = "Required to post the persistent foreground-service notification.",
                 primaryText = "Grant",
-                onPrimary = { MyNotificationUtils.requestPostNotifications(postNotifLauncher) },
+                onPrimary = { FooNotification.requestPostNotifications(postNotifLauncher) },
                 secondaryText = "Application Notification Settings",
-                onSecondary = { MyNotificationUtils.startActivityAppNotificationSettings(context) }
+                onSecondary = { FooNotification.startActivityAppNotificationSettings(context) }
             )
         }
         if (Requirement.NOTIFICATION_LISTENER in snapshot.missing) {
@@ -194,7 +194,7 @@ fun PermissionsGateScreen(
                 description = "Required to read notifications via NotificationListenerService. " +
                         "Enable the `NotifAI` app in the list that opens.",
                 primaryText = "Notification read, reply & control",
-                onPrimary = { MyNotificationUtils.startActivityNotificationListenerSettings(context) }
+                onPrimary = { FooNotification.startActivityNotificationListenerSettings(context) }
             )
         }
         // ── Advisories (visible here too — user can action before entering app) ──
@@ -211,7 +211,7 @@ fun PermissionsGateScreen(
                 description = "Helps keep the service alive on OEMs with aggressive battery management " +
                         "(Samsung, Xiaomi, OnePlus, etc). Not required, but strongly recommended.",
                 buttonText = "Request Exemption",
-                onClick = { MyPermissionUtils.startActivityIgnoreBatteryOptimizations(context) }
+                onClick = { FooPermission.startActivityIgnoreBatteryOptimizations(context) }
             )
         }
     }
@@ -270,7 +270,7 @@ fun OperationalScreen(
                     description = "Recommended for reliable background operation, especially on Samsung, " +
                             "Xiaomi, and OnePlus devices.",
                     buttonText  = "Request Exemption",
-                    onClick     = { MyPermissionUtils.startActivityIgnoreBatteryOptimizations(context) }
+                    onClick     = { FooPermission.startActivityIgnoreBatteryOptimizations(context) }
                 )
             }
         }

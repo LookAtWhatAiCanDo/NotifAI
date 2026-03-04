@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import llc.lookatwhataicando.notifai.MyNotificationListenerService
-import llc.lookatwhataicando.notifai.util.MyNotificationUtils
-import llc.lookatwhataicando.notifai.util.MyPermissionUtils
+import com.smartfoo.android.core.notification.FooNotification
+import com.smartfoo.android.core.permission.FooPermission
 
 /**
  * Requirement  = hard gate. App cannot function without these.
@@ -111,12 +111,12 @@ class StartupCoordinator(private val app: Application) : AndroidViewModel(app) {
      */
     fun recheck() {
         val missing = buildSet {
-            if (!MyNotificationUtils.isPostNotificationsPermissionGranted(app)) add(Requirement.POST_NOTIFICATIONS)
+            if (!FooNotification.isPostNotificationsPermissionGranted(app)) add(Requirement.POST_NOTIFICATIONS)
             if (!MyNotificationListenerService.isNotificationListenerEnabled(app)) add(Requirement.NOTIFICATION_LISTENER)
         }
 
         val advisories = buildSet {
-            if (!MyPermissionUtils.isIgnoringBatteryOptimizations(app)) add(Advisory.BATTERY_OPTIMIZATION)
+            if (!FooPermission.isIgnoringBatteryOptimizations(app)) add(Advisory.BATTERY_OPTIMIZATION)
         }
 
         _state.value = StartupState.Result(

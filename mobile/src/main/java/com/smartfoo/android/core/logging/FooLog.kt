@@ -1,13 +1,15 @@
-package llc.lookatwhataicando.notifai.util
+package com.smartfoo.android.core.logging
 
-object MyLogUtils {
+import com.smartfoo.android.core.FooReflection
+
+object FooLog {
     @Suppress("FunctionName")
     @JvmStatic
     fun TAG(o: Any): String = TAG(o.javaClass)
 
     @Suppress("FunctionName")
     @JvmStatic
-    fun TAG(c: Class<*>): String = TAG(MyReflectionUtils.getShortClassName(c)!!)
+    fun TAG(c: Class<*>): String = TAG(FooReflection.getShortClassName(c)!!)
 
     /**
      * Per https://developer.android.com/reference/android/util/Log.html#isLoggable(java.lang.String,%20int)

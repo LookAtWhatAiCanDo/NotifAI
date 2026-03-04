@@ -1,6 +1,6 @@
-package llc.lookatwhataicando.notifai.util
+package com.smartfoo.android.core
 
-object MyReflectionUtils {
+object FooReflection {
     @JvmStatic
     fun getClass(o: Any?): Class<*>? = o as? Class<*> ?: o?.javaClass
 

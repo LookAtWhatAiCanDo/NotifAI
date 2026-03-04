@@ -7,26 +7,27 @@ import android.os.UserHandle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
-import llc.lookatwhataicando.notifai.util.MyLogUtils
-import llc.lookatwhataicando.notifai.util.MyNotificationUtils
-import llc.lookatwhataicando.notifai.util.MyStringUtils
+import com.smartfoo.android.core.logging.FooLog
+import com.smartfoo.android.core.notification.FooNotification
+import com.smartfoo.android.core.FooString
+import com.smartfoo.android.core.notification.ActiveNotificationsSnapshot
 
 class MyNotificationListenerService : NotificationListenerService() {
     companion object {
-        private val TAG = MyLogUtils.TAG(MyNotificationListenerService::class)
+        private val TAG = FooLog.TAG(MyNotificationListenerService::class)
 
         @Suppress("SimplifyBooleanWithConstants", "KotlinConstantConditions", "RedundantSuppression", "UNREACHABLE_CODE")
         private val LOG_NOTIFICATION = true && BuildConfig.DEBUG
 
         fun isNotificationListenerEnabled(context: Context) =
-            MyNotificationUtils.isNotificationListenerEnabled(context, MyNotificationListenerService::class.java)
+            FooNotification.isNotificationListenerEnabled(context, MyNotificationListenerService::class.java)
 
         fun requestNotificationListenerRebind(context: Context) {
-            MyNotificationUtils.requestNotificationListenerRebind(context, MyNotificationListenerService::class.java)
+            FooNotification.requestNotificationListenerRebind(context, MyNotificationListenerService::class.java)
         }
 
         fun requestNotificationListenerUnbind(context: Context) {
-            MyNotificationUtils.requestNotificationListenerUnbind(context, MyNotificationListenerService::class.java)
+            FooNotification.requestNotificationListenerUnbind(context, MyNotificationListenerService::class.java)
         }
     }
 
@@ -90,7 +91,7 @@ class MyNotificationListenerService : NotificationListenerService() {
         reason: Int
     ) {
         if (LOG_NOTIFICATION) {
-            Log.d(TAG, "#NOTIFICATION onNotificationRemoved(sbn=$sbn, rankingMap=$rankingMap, reason=${MyStringUtils.quote(MyNotificationUtils.notificationCancelReasonToString(reason))})")
+            Log.d(TAG, "#NOTIFICATION onNotificationRemoved(sbn=$sbn, rankingMap=$rankingMap, reason=${FooString.quote(FooNotification.notificationCancelReasonToString(reason))})")
         }
         super.onNotificationRemoved(sbn, rankingMap, reason)
         // TODO: Handle removed notification...
