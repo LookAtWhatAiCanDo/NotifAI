@@ -1,3 +1,14 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">NotifAI</string>
+
+    <string name="notification_channel_name" tools:ignore="DuplicateStrings">NotifAI</string>
+    <string name="notification_channel_description">Foreground status for NotifAI service</string>
+
+    <string name="notification_initializing">Initializing…</string>
+
+    <string name="notification_action_persistent">Pin</string>
+    <string name="notification_action_enable">Enable</string>
+    <string name="notification_action_quit">Quit</string>
+    <string name="notification_action_debug_speak">Test speech</string>
+
 </resources>

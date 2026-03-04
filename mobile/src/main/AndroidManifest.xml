@@ -2,6 +2,27 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"
+        tools:ignore="ForegroundServicesPolicy" />
+    <!--
+    https://developer.android.com/about/versions/14/changes/fgs-types-required
+    NOTE: If multiple types are needed/defined in AndroidManifest then all of those
+    foreground services types need to be passed as flags to `android.app.Service.startForeground(...)`
+    All foreground service type requirements must be met before `startForeground(...)` will succeed.
+    > In cases where a foreground service is started with multiple types, then the
+    > foreground service must adhere to the
+    > [platform enforcement requirements](https://developer.android.com/guide/components/foreground-services#runtime-permissions)
+    > of all types.
+    The AndroidManifest service(s) must also define a compatible `android:foregroundServiceType`.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!--
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    -->
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -10,7 +31,10 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.NotifAI">
+        android:theme="@style/Theme.NotifAI"
+        android:name=".MyApp"
+        >
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -20,6 +44,42 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".MyForegroundNotificationService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" >
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Notification Parsing Voice Assistant Session"
+                />
+        </service>
+
+        <service
+            android:name=".MyNotificationListenerService"
+            android:exported="true"
+            android:label="NotifAI Notifications Listener"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.notification.default_filter_types"
+                android:value="conversations" />
+            <meta-data
+                android:name="android.app.SERVICE_SETTINGS"
+                android:resource="@xml/notification_listener_service_meta" />
+        </service>
+
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>
