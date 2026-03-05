@@ -12,9 +12,7 @@ class FooTextToSpeechBuilder {
     companion object {
         private val TAG = FooLog.TAG(FooTextToSpeechBuilder::class)
 
-        enum class SilenceMillis(
-            val value: Int,
-        ) {
+        enum class SilenceMillis(val value: Int) {
             Word(300),
             Sentence(500),
             Paragraph(750),
@@ -157,15 +155,15 @@ class FooTextToSpeechBuilder {
         return appendSpeech(context.getString(textResId, *formatArgs))
     }
 
-    fun appendSpeech(text: CharSequence): FooTextToSpeechBuilder = appendSpeech(text.toString())
+    fun appendSpeech(text: CharSequence) = appendSpeech(text.toString())
 
-    fun appendSpeech(text: String): FooTextToSpeechBuilder = append(FooTextToSpeechPartSpeech(text))
+    fun appendSpeech(text: String) = append(FooTextToSpeechPartSpeech(text))
 
-    fun appendSilenceWordBreak(): FooTextToSpeechBuilder = appendSilence(SilenceMillis.Word.value)
+    fun appendSilenceWordBreak() = appendSilence(SilenceMillis.Word.value)
 
-    fun appendSilenceSentenceBreak(): FooTextToSpeechBuilder = appendSilence(SilenceMillis.Sentence.value)
+    fun appendSilenceSentenceBreak() = appendSilence(SilenceMillis.Sentence.value)
 
-    fun appendSilenceParagraphBreak(): FooTextToSpeechBuilder = appendSilence(SilenceMillis.Paragraph.value)
+    fun appendSilenceParagraphBreak() = appendSilence(SilenceMillis.Paragraph.value)
 
     fun appendSilence(silenceMillis: Int): FooTextToSpeechBuilder {
         if (silenceMillis <= 0) {

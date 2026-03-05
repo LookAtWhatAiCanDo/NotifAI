@@ -1,7 +1,6 @@
 package llc.lookatwhataicando.notifai
 
 import android.app.Application
-import android.util.Log
 import com.smartfoo.android.core.logging.FooLog
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -11,11 +10,12 @@ class MyApp : Application() {
     }
 
     private val isShutdown = AtomicBoolean(false)
+    val textToSpeechManager = TextToSpeechManager()
 
     override fun onCreate() {
         FooLog.v(TAG, "+onCreate()")
         super.onCreate()
-        //...
+        textToSpeechManager.start(this)
         FooLog.v(TAG, "-onCreate()")
     }
 
@@ -33,6 +33,8 @@ class MyApp : Application() {
             FooLog.d(TAG, "shutdown: already executed")
         } else {
             FooLog.v(TAG, "...")
+            runCatching { textToSpeechManager.stop() }
+                .onFailure { FooLog.w(TAG, "shutdown: textToSpeechManager.stop() failed", it) }
 //        if (this::mediaSource.isInitialized) {
 //            try {
 //                mediaSource.stop("NotifAI.shutdown")

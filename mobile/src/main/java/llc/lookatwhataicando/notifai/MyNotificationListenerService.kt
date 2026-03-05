@@ -9,11 +9,11 @@ import android.os.Looper
 import android.os.UserHandle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import android.util.Log
 import com.smartfoo.android.core.logging.FooLog
 import com.smartfoo.android.core.notification.FooNotification
 import com.smartfoo.android.core.FooString
 import llc.lookatwhataicando.notifai.ActiveNotificationsSnapshot
+import llc.lookatwhataicando.notifai.notification.NotificationParserManager
 
 class MyNotificationListenerService : NotificationListenerService() {
     companion object {
@@ -81,7 +81,34 @@ class MyNotificationListenerService : NotificationListenerService() {
             FooLog.d(TAG, "#NOTIFICATION onListenerConnected()")
         }
         super.onListenerConnected()
-        initializeActiveNotifications()
+        /*
+        * Delay initialization to avoid system_server process binder transaction issues during the onListenerConnected callback:
+        * ```
+        * 2026-03-04 13:01:03.519  1469-1469  BoundServiceSession  system_server  E  Bad key 0 received in binderTransactionCompleted! Closing all transactions on CR{fe8bec1 1469->llc.lookatwhataicando.notifai/.MyNotificationListenerService flags=0x805000101}. Current keys: {onListenerConnected=0}; Counts: [0] (Fix with AI)
+        *                                                                           android.util.Log$TerribleFailure: Bad key 0 received in binderTransactionCompleted! Closing all transactions on CR{fe8bec1 1469->llc.lookatwhataicando.notifai/.MyNotificationListenerService flags=0x805000101}. Current keys: {onListenerConnected=0}; Counts: [0]
+        *                                                                             at android.util.Log.wtf(Log.java:339)
+        *                                                                             at android.util.Slog.wtfStack(Slog.java:246)
+        *                                                                             at com.android.server.am.BoundServiceSession.handleInvalidToken(BoundServiceSession.java:128)
+        *                                                                             at com.android.server.am.BoundServiceSession.binderTransactionCompleted(BoundServiceSession.java:183)
+        *                                                                             at com.android.server.notification.NotificationManagerService$NotificationListeners$1.$r8$lambda$QiDnMMKg1JpZvr40fh3mCflc3tA(NotificationManagerService.java:13958)
+        *                                                                             at com.android.server.notification.NotificationManagerService$NotificationListeners$1$$ExternalSyntheticLambda0.run(R8$$SyntheticClass:0)
+        *                                                                             at android.os.Handler.handleCallback(Handler.java:1070)
+        *                                                                             at android.os.Handler.dispatchMessage(Handler.java:125)
+        *                                                                             at android.os.Looper.dispatchMessage(Looper.java:333)
+        *                                                                             at android.os.Looper.loopOnce(Looper.java:263)
+        *                                                                             at android.os.Looper.loop(Looper.java:367)
+        *                                                                             at com.android.server.SystemServer.run(SystemServer.java:1081)
+        *                                                                             at com.android.server.SystemServer.main(SystemServer.java:711)
+        *                                                                             at java.lang.reflect.Method.invoke(Native Method)
+        *                                                                             at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:566)
+        *                                                                             at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:907)
+        * ```
+        * The app itself and phone still seems to be running fine.
+        * Since adding this delay I have not seen this error since 2026/03/04.
+        */
+        Handler(Looper.getMainLooper()).post {
+            initializeActiveNotifications()
+        }
     }
 
     override fun onListenerDisconnected() {

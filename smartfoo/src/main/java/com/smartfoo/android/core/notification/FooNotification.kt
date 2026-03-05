@@ -142,6 +142,12 @@ object FooNotification {
     @JvmStatic
     fun isNotificationListenerEnabled(
         context: Context,
+        notificationListenerService: NotificationListenerService,
+    ) = isNotificationListenerEnabled(context, notificationListenerService.javaClass)
+
+    @JvmStatic
+    fun isNotificationListenerEnabled(
+        context: Context,
         notificationListenerServiceClass: KClass<out NotificationListenerService>,
     ) = isNotificationListenerEnabled(context, notificationListenerServiceClass.java)
 
@@ -262,9 +268,9 @@ object FooNotification {
         showAllExtras: Boolean = false,
     ): String {
         val notification = sbn?.notification ?: return "null"
-        val extras = notification.extras
-        val title = extras?.getCharSequence(Notification.EXTRA_TITLE)
-        var text = extras?.getCharSequence(Notification.EXTRA_TEXT)
+        val extras = notification.extras.deepCopy()
+        val title = extras.getCharSequence(Notification.EXTRA_TITLE)
+        var text = extras.getCharSequence(Notification.EXTRA_TEXT)
         if (text != null) {
             text =
                 if (text.length > 33) {
@@ -275,45 +281,37 @@ object FooNotification {
                     FooString.quote(text)
                 }
         }
-        val subText = extras?.getCharSequence(Notification.EXTRA_SUB_TEXT)
+        val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)
 
         val sb = StringBuilder("{ ")
-        if (title != null || text != null || subText != null) {
-            sb.append("extras={ ")
-        }
-        if (title != null) {
-            sb.append("${Notification.EXTRA_TITLE}=${FooString.quote(title)}")
-        }
-        if (text != null) {
-            sb.append(", ${Notification.EXTRA_TEXT}=$text")
-        }
-        if (subText != null) {
-            sb.append(", ${Notification.EXTRA_SUB_TEXT}=${FooString.quote(subText)}")
-        }
-        if (title != null || text != null || subText != null) {
-            sb.append(" }, ")
-        }
-        sb.append(
-            "id=${sbn.id}, key=${FooString.quote(sbn.key)}, packageName=${
-                FooString.quote(sbn.packageName)
-            }, notification={ $notification",
-        )
+        sb.append("packageName=${FooString.quote(sbn.packageName)}")
+        sb.append(", key=${FooString.quote(sbn.key)}")
+        sb.append(", id=${sbn.id}, ")
         if (showAllExtras) {
-            sb.append(", extras=")
+            sb.append(", extras={")
+            if (title != null) {
+                sb.append("${Notification.EXTRA_TITLE}=${FooString.quote(title)}")
+            }
+            if (text != null) {
+                sb.append(", ${Notification.EXTRA_TEXT}=${FooString.quote(text)}")
+            }
+            if (subText != null) {
+                sb.append(", ${Notification.EXTRA_SUB_TEXT}=${FooString.quote(subText)}")
+            }
             if (extras != null) {
                 extras.remove(Notification.EXTRA_TITLE)
                 extras.remove(Notification.EXTRA_TEXT)
                 extras.remove(Notification.EXTRA_SUB_TEXT)
             }
             sb.append(FooString.toString(extras))
+            sb.append("}")
         }
-        sb.append(" } }")
+        sb.append(", notification={ $notification } }")
         return sb.toString()
     }
 
     @JvmStatic
-    fun toString(ranking: NotificationListenerService.Ranking) =
-        "{key=${ranking.key}, rank=${ranking.rank}}"
+    fun toString(ranking: Ranking) = "{key=${ranking.key}, rank=${ranking.rank}}"
 
     @Suppress("KotlinConstantConditions")
     @JvmStatic
@@ -337,7 +335,7 @@ object FooNotification {
                 if (rankingMap.getRanking(key, ranking)) {
                     when (level) {
                         1 -> sb.append("…")
-                        2 -> sb.append(ranking.toString().substringAfterLast('$'))
+                        2 -> sb.append(ranking.rank)
                     }
                 } else {
                     sb.append("null")

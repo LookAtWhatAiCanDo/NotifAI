@@ -22,7 +22,7 @@ class ActiveNotificationsSnapshot(
     }
 
     /** Snapshot of the [android.service.notification.NotificationListenerService] used at the last [snapshot] call; null after [reset]. */
-    var notificationListenerService: MyNotificationListenerService? = null
+    var notificationListenerService: NotificationListenerService? = null
         private set
 
     /** Snapshot of active notifications at the last [snapshot] call; null after [reset]. */
@@ -65,7 +65,7 @@ class ActiveNotificationsSnapshot(
      * Replaces current state with a fresh snapshot from [service].
      * If [service] is null, behaves like [reset].
      */
-    fun snapshot(service: MyNotificationListenerService?): ActiveNotificationsSnapshot {
+    fun snapshot(service: NotificationListenerService?): ActiveNotificationsSnapshot {
         reset()
         notificationListenerService = service
         if (service != null) {

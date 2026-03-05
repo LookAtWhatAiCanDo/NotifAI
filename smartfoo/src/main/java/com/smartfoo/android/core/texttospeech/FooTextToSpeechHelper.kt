@@ -1,15 +1,17 @@
 package com.smartfoo.android.core.texttospeech
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.speech.tts.TextToSpeech
 import com.smartfoo.android.core.logging.FooLog
 import com.smartfoo.android.core.platform.FooPlatformUtils
 
 /**
- * From:
+ * Reference:
  * https://github.com/android/platform_frameworks_base/blob/master/core/java/android/speech/tts/TtsEngines.java
  */
+@Suppress("unused")
 object FooTextToSpeechHelper {
     private val TAG = FooLog.TAG(FooTextToSpeechHelper::class)
 
@@ -20,15 +22,15 @@ object FooTextToSpeechHelper {
         get() = Intent().setAction(SETTINGS_ACTION_TTS_SETTINGS)
 
     @JvmStatic
-    fun showTextToSpeechSettings(activity: Activity) {
-        FooPlatformUtils.startActivity(activity, intentTextToSpeechSettings)
+    fun showTextToSpeechSettings(context: Context) {
+        FooPlatformUtils.startActivity(context, intentTextToSpeechSettings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     val intentRequestTextToSpeechData: Intent
         get() = Intent().setAction(TextToSpeech.Engine.ACTION_CHECK_TTS_DATA)
 
     /**
-     * The Activity should implement [Activity.onActivityResult] similar to:
+     * The calling Activity should implement [Activity.onActivityResult] similar to:
      * <pre>
      * @Override
      * protected fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {

@@ -72,10 +72,7 @@ object FooPlatformUtils {
         packageName: String? = null,
     ): String? {
         val packageName = packageName ?: getPackageName(context)
-        val ai = getApplicationInfo(context, packageName)
-        if (ai == null) {
-            return null
-        }
+        val ai = getApplicationInfo(context, packageName) ?: return null
         return getPackageManager(context).getApplicationLabel(ai).toString()
     }
 
@@ -98,11 +95,8 @@ object FooPlatformUtils {
         packageName: String? = null,
     ): Int? {
         val packageName = packageName ?: getPackageName(context)
-        val ai = getApplicationInfo(context, packageName)
-        if (ai == null) {
-            return null
-        }
-        return getApplicationInfo(context, packageName)?.uid
+        val ai = getApplicationInfo(context, packageName) ?: return null
+        return ai.uid
     }
 
     /**
@@ -324,7 +318,7 @@ object FooPlatformUtils {
                      * "Deprecated: Use `getValue(String, Class, Class[])`. This method should only be used in other deprecated APIs."
                      * That first sentence does not help this method that dynamically enumerates the Bundle entries without awareness/concern of any types.
                      * That second sentence tells me they probably won't be getting rid of android.os.BaseBundle#get(java.lang.String) any time soon.
-                     * So marking deprecated `android.os.BaseBundle#get(java.lang.String)` as safe to call for awhile... until it isn't.
+                     * So marking deprecated `android.os.BaseBundle#get(java.lang.String)` as safe to call for a while... until it isn't.
                      */
                     @Suppress("DEPRECATION")
                     bundle.get(key)
@@ -381,16 +375,16 @@ object FooPlatformUtils {
     ) {
         /*
         if (context is Application) {
-            // TODO Use Application.ActivityLifecycleCallbacks (like in AlfredAI) to actually test for background or not
-            /*
-            // Background startActivity requires FLAG_ACTIVITY_NEW_TASK
-            if ((intent.getFlags() & Intent.FLAG_ACTIVITY_NEW_TASK) == 0)
-            {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            }
-         */
+          // TODO Use Application.ActivityLifecycleCallbacks (like in AlfredAI) to actually test for background or not
+          /*
+          // Background startActivity requires FLAG_ACTIVITY_NEW_TASK
+          if ((intent.getFlags() & Intent.FLAG_ACTIVITY_NEW_TASK) == 0)
+          {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+          }
+          */
         }
-         */
+        */
         context.startActivity(intent, bundle)
     }
 
@@ -428,8 +422,8 @@ object FooPlatformUtils {
     }
 
     /**
-     * This has a sometimes annoying side-effect of Back not being able to exit the Activity.
-     * Even Android's built in Notification Tile "Wireless debug settings" exhibits the same problem.
+     * This has a sometimes annoying side effect of Back not being able to exit the Activity.
+     * Even Android's built-in Notification Tile "Wireless debug settings" exhibits the same problem.
      * When this happens just do what you always do to close an Activity:
      *   swipe up from the bottom and then swipe the Activity up to close it.
      *
@@ -477,7 +471,7 @@ object FooPlatformUtils {
          */
 
         val pkg = "com.android.settings"
-        val cls = "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging"
+        val cls = $$"com.android.settings.development.qstile.DevelopmentTiles$WirelessDebugging"
         val componentName = ComponentName(pkg, cls)
 
         // "android.service.quicksettings.action.QS_TILE_PREFERENCES"

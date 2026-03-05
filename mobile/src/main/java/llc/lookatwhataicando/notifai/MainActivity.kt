@@ -3,7 +3,6 @@ package llc.lookatwhataicando.notifai
 import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -58,9 +57,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.smartfoo.android.core.logging.FooLog
 import com.smartfoo.android.core.notification.FooNotification
 import com.smartfoo.android.core.permission.FooPermission
+import com.smartfoo.android.core.platform.FooPlatformUtils
+import com.smartfoo.android.core.texttospeech.FooTextToSpeechHelper
 import llc.lookatwhataicando.notifai.startup.Advisory
 import llc.lookatwhataicando.notifai.startup.Requirement
 import llc.lookatwhataicando.notifai.startup.StartupCoordinator
@@ -99,9 +99,13 @@ class MainActivity : ComponentActivity() {
         splash.setKeepOnScreenCondition {
             !coordinator.startupEvaluated.value
         }
+        val app = application as MyApp
         setContent {
             NotifAITheme {
-                AppRoot(coordinator)
+                AppRoot(
+                    coordinator = coordinator,
+                    textToSpeechManager = app.textToSpeechManager
+                )
             }
         }
     }
@@ -121,18 +125,24 @@ class MainActivity : ComponentActivity() {
  *     - Task re-entry after process death/recreation
  */
 @Composable
-fun AppRoot(coordinator: StartupCoordinator) {
+fun AppRoot(
+    coordinator: StartupCoordinator,
+    textToSpeechManager: TextToSpeechManager
+) {
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 coordinator.recheck()
+                textToSpeechManager.retryStartIfFailed()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val state by coordinator.state.collectAsStateWithLifecycle()
+    val textToSpeechInitState by textToSpeechManager.initState.collectAsStateWithLifecycle()
+    val textToSpeechReady = textToSpeechInitState is TextToSpeechManager.InitState.Ready
     when (state) {
         // recheck() hasn't returned yet. Splash is covering the window.
         // Render nothing — avoids a single-frame flash of empty UI.
@@ -144,9 +154,14 @@ fun AppRoot(coordinator: StartupCoordinator) {
                     // Shouldn't occur (Result always has evaluated=true) but
                     // guard defensively so splash logic stays correct.
                 }
-                snapshot.missing.isNotEmpty() -> {
+                snapshot.missing.isNotEmpty() || !textToSpeechReady -> {
                     // One or more hard requirements are missing.
-                    PermissionsGateScreen(snapshot, coordinator)
+                    PermissionsGateScreen(
+                        snapshot = snapshot,
+                        coordinator = coordinator,
+                        textToSpeechManager = textToSpeechManager,
+                        textToSpeechInitState = textToSpeechInitState
+                    )
                 }
                 else -> {
                     // All requirements met. Advisory items may still be shown
@@ -176,9 +191,14 @@ fun AppRoot(coordinator: StartupCoordinator) {
 @Composable
 fun PermissionsGateScreen(
     snapshot: StartupSnapshot,
-    coordinator: StartupCoordinator
+    coordinator: StartupCoordinator,
+    textToSpeechManager: TextToSpeechManager,
+    textToSpeechInitState: TextToSpeechManager.InitState
 ) {
     val forceShowAdvisories = false
+    val textToSpeechReady = textToSpeechInitState is TextToSpeechManager.InitState.Ready
+    val headerTitle = "Setup Required"
+    val headerText = "This app speaks notifications in the background.\nThe following are required before it can start:"
 
     val context = LocalContext.current
     val colors = MaterialTheme.colorScheme
@@ -201,28 +221,53 @@ fun PermissionsGateScreen(
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         // ── Header ───────────────────────────────────────────────────
+        LaunchedEffect(textToSpeechInitState) {
+            if (textToSpeechInitState is TextToSpeechManager.InitState.Ready) {
+                textToSpeechManager.speak(headerTitle)
+                textToSpeechManager.speak(headerText)
+            }
+        }
         Text(
-            text = "Setup Required",
+            text = headerTitle,
             style = type.headlineLarge.copy(fontWeight = FontWeight.Bold),
             color = colors.onBackground
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "This app runs as a Notification Listener foreground service. " +
-                    "The following ${if (snapshot.missing.size > 1) "permissions are" else "permission is"} " +
-                    "required before it can start.",
+            text = headerText,
             style = type.bodyMedium,
             color = colors.onSurfaceVariant,
             lineHeight = 22.sp
         )
-        Spacer(Modifier.height(32.dp))
-        // ── Section label: Required ───────────────────────────────────
-        SectionLabel(
-            text  = "REQUIRED",
-            color = colors.error
+        Spacer(Modifier.height(12.dp))
+        // ── Required TEXT_TO_SPEECH card ─────────────────────────────
+        RequirementCard(
+            icon = Icons.Outlined.Warning,
+            title = "Text To Speech Engine",
+            description = when (textToSpeechInitState) {
+                is TextToSpeechManager.InitState.Ready ->
+                    "Required to speak notifications. Engine is initialized."
+                is TextToSpeechManager.InitState.Initializing ->
+                    "Required to speak notifications. Engine is currently initializing."
+                is TextToSpeechManager.InitState.NotStarted ->
+                    "Required to speak notifications. Engine has not started."
+                is TextToSpeechManager.InitState.Failed ->
+                    "Required to speak notifications. Engine failed to initialize."
+            },
+            isMissing = !textToSpeechReady,
+            primaryAction = if (!textToSpeechReady) PermissionAction(
+                label = "Retry Voice Setup",
+                onClick = { textToSpeechManager.retryStartIfFailed() }
+            ) else null,
+            secondaryAction = if (!textToSpeechReady) PermissionAction(
+                label = "Open TTS Settings",
+                onClick = {
+                    FooPlatformUtils.startActivity(context, FooTextToSpeechHelper.intentTextToSpeechSettings)
+                }
+            ) else null
         )
         Spacer(Modifier.height(12.dp))
-        // ── POST_NOTIFICATIONS card ──────────────────────────────────
+        // ── Required POST_NOTIFICATIONS card ─────────────────────────
         val postMissing = Requirement.POST_NOTIFICATIONS in snapshot.missing
         RequirementCard(
             icon        = Icons.Outlined.Notifications,
@@ -236,12 +281,12 @@ fun PermissionsGateScreen(
                 }
             ) else null,
             secondaryAction = PermissionAction(
-                label   = "Application Notification Settings",
+                label   = "Notification Settings",
                 onClick = { FooNotification.startActivityAppNotificationSettings(context) }
             )
         )
         Spacer(Modifier.height(12.dp))
-        // ── NOTIFICATION_LISTENER card ───────────────────────────────
+        // ── Required NOTIFICATION_LISTENER card ──────────────────────
         val listenerMissing = Requirement.NOTIFICATION_LISTENER in snapshot.missing
         RequirementCard(
             icon        = Icons.Outlined.Lock,
@@ -254,11 +299,11 @@ fun PermissionsGateScreen(
                 onClick = { FooNotification.startActivityNotificationListenerSettings(context) }
             ) else null
         )
-        // ── Section label: Recommended ────────────────────────────────
+        // ── Recommended BATTERY_OPTIMIZATION card ────────────────────
         if (forceShowAdvisories || Advisory.BATTERY_OPTIMIZATION in snapshot.advisories) {
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(12.dp))
             HorizontalDivider(color = colors.outlineVariant)
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(12.dp))
             SectionLabel(
                 text  = "RECOMMENDED",
                 color = colors.tertiary  // amber in our scheme
@@ -289,6 +334,7 @@ fun AdvisoryIgnoresBatteryOptimizations() {
  * By the time we reach here:
  *   ✓ POST_NOTIFICATIONS granted (or API < 33)
  *   ✓ NOTIFICATION_LISTENER enabled
+ *   ✓ TextToSpeech engine initialized
  *   ✓ FGS is legal to start
  *
  * FGS is started via LaunchedEffect(Unit) — fires once when this
@@ -466,6 +512,7 @@ private fun AdvisoryCard(
     title: String,
     description: String,
     action: PermissionAction,
+    secondaryAction: PermissionAction? = null,
 ) {
     val colors = MaterialTheme.colorScheme
 
@@ -506,18 +553,37 @@ private fun AdvisoryCard(
                 lineHeight = 20.sp
             )
             Spacer(Modifier.height(16.dp))
-            // OutlinedButton with amber/tertiary tint for advisory actions
-            OutlinedButton(
-                onClick = action.onClick,
-                shape   = RoundedCornerShape(10.dp),
-                border  = BorderStroke(1.dp, colors.tertiary),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    action.label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = colors.tertiary
-                )
+                // OutlinedButton with amber/tertiary tint for advisory actions
+                OutlinedButton(
+                    onClick = action.onClick,
+                    shape   = RoundedCornerShape(10.dp),
+                    border  = BorderStroke(1.dp, colors.tertiary),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        action.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = colors.tertiary
+                    )
+                }
+                secondaryAction?.let {
+                    OutlinedButton(
+                        onClick = it.onClick,
+                        shape   = RoundedCornerShape(10.dp),
+                        border  = BorderStroke(1.dp, colors.outline),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                    ) {
+                        Text(
+                            it.label,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = colors.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
