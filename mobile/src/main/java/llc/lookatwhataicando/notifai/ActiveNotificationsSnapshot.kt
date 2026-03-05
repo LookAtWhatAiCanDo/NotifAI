@@ -1,14 +1,13 @@
-package com.smartfoo.android.core.notification
+package llc.lookatwhataicando.notifai
 
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import android.util.Log
 import com.smartfoo.android.core.FooString
 import com.smartfoo.android.core.logging.FooLog
-import llc.lookatwhataicando.notifai.MyNotificationListenerService
+import com.smartfoo.android.core.notification.FooNotification
 
 /**
  * Holds an immutable snapshot of active notifications and their ranking.
@@ -18,6 +17,10 @@ import llc.lookatwhataicando.notifai.MyNotificationListenerService
 class ActiveNotificationsSnapshot(
     val context: Context,
 ) {
+    companion object {
+        private val TAG = FooLog.TAG(ActiveNotificationsSnapshot::class)
+    }
+
     /** Snapshot of the [android.service.notification.NotificationListenerService] used at the last [snapshot] call; null after [reset]. */
     var notificationListenerService: MyNotificationListenerService? = null
         private set
@@ -40,9 +43,9 @@ class ActiveNotificationsSnapshot(
                 @Suppress("ConstantConditionIf")
                 if (false) {
                     for (sbn in _activeNotificationsRanked!!) {
-                        Log.e(TAG, "activeNotificationsRanked: notification=${toString(sbn, showAllExtras = false)}")
+                        FooLog.e(TAG, "activeNotificationsRanked: notification=${FooNotification.toString(sbn, showAllExtras = false)}")
                     }
-                    Log.e(TAG, "activeNotificationsRanked:")
+                    FooLog.e(TAG, "activeNotificationsRanked:")
                 }
             }
             return _activeNotificationsRanked
@@ -185,65 +188,5 @@ class ActiveNotificationsSnapshot(
                 .thenBy { keys[it.key]!!.sys }
                 .thenBy { keys[it.key]!!.tiebreak },
         )
-    }
-
-    companion object {
-        private val TAG = FooLog.TAG(ActiveNotificationsSnapshot::class)
-
-        fun toString(ranking: NotificationListenerService.Ranking): String =
-            "{key=${ranking.key}, rank=${ranking.rank}}"
-
-        fun toString(
-            sbn: StatusBarNotification,
-            showAllExtras: Boolean = false,
-        ): String {
-            val notification = sbn.notification
-            val extras = notification.extras
-            val title = extras?.getCharSequence(Notification.EXTRA_TITLE)
-            var text = extras?.getCharSequence(Notification.EXTRA_TEXT)
-            if (text != null) {
-                text =
-                    if (text.length > 33) {
-                        "(${text.length})${FooString.quote(text.substring(0, 32))
-                            .replaceAfterLast("\"", "…\"")}"
-                    } else {
-                        FooString.quote(text)
-                    }
-            }
-            val subText = extras?.getCharSequence(Notification.EXTRA_SUB_TEXT)
-
-            val sb = StringBuilder("{ ")
-            if (title != null || text != null || subText != null) {
-                sb.append("extras={ ")
-            }
-            if (title != null) {
-                sb.append("${Notification.EXTRA_TITLE}=${FooString.quote(title)}")
-            }
-            if (text != null) {
-                sb.append(", ${Notification.EXTRA_TEXT}=$text")
-            }
-            if (subText != null) {
-                sb.append(", ${Notification.EXTRA_SUB_TEXT}=${FooString.quote(subText)}")
-            }
-            if (title != null || text != null || subText != null) {
-                sb.append(" }, ")
-            }
-            sb.append(
-                "id=${sbn.id}, key=${FooString.quote(sbn.key)}, packageName=${
-                    FooString.quote(sbn.packageName)
-                }, notification={ $notification",
-            )
-            if (showAllExtras) {
-                sb.append(", extras=")
-                if (extras != null) {
-                    extras.remove(Notification.EXTRA_TITLE)
-                    extras.remove(Notification.EXTRA_TEXT)
-                    extras.remove(Notification.EXTRA_SUB_TEXT)
-                }
-                sb.append(FooString.toString(extras))
-            }
-            sb.append(" } }")
-            return sb.toString()
-        }
     }
 }

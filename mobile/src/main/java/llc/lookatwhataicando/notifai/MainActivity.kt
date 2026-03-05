@@ -1,5 +1,6 @@
 package llc.lookatwhataicando.notifai
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -230,7 +231,9 @@ fun PermissionsGateScreen(
             isMissing   = postMissing,
             primaryAction = if (postMissing) PermissionAction(
                 label   = "Grant Permission",
-                onClick = { FooNotification.requestPostNotifications(postNotifLauncher) }
+                onClick = {
+                    postNotifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
             ) else null,
             secondaryAction = PermissionAction(
                 label   = "Application Notification Settings",

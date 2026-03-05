@@ -63,7 +63,7 @@ class MyForegroundNotificationService : Service() {
     override fun onBind(p0: Intent?): IBinder? = null
 
     override fun onCreate() {
-        Log.v(TAG, "+onCreate()")
+        FooLog.v(TAG, "+onCreate()")
         super.onCreate()
         startForeground()
     }
@@ -91,7 +91,7 @@ class MyForegroundNotificationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.v(TAG, "onStartCommand(intent=$intent}, flags=$flags, startId=$startId)")
+        FooLog.v(TAG, "onStartCommand(intent=$intent}, flags=$flags, startId=$startId)")
         when (intent?.action) {
             ACTION_APP_SHUTDOWN -> {
                 AppShutdownManager.markQuitRequested(this)

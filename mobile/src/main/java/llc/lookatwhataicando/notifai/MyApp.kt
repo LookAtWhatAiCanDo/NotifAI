@@ -13,36 +13,36 @@ class MyApp : Application() {
     private val isShutdown = AtomicBoolean(false)
 
     override fun onCreate() {
-        Log.v(TAG, "+onCreate()")
+        FooLog.v(TAG, "+onCreate()")
         super.onCreate()
         //...
-        Log.v(TAG, "-onCreate()")
+        FooLog.v(TAG, "-onCreate()")
     }
 
     fun onBootCompleted() {
-        Log.v(TAG, "+onBootCompleted()")
+        FooLog.v(TAG, "+onBootCompleted()")
         //systemEvents.onBootCompleted(Intent.ACTION_BOOT_COMPLETED)
         MyForegroundNotificationService.start(this)
         //HourlyDigestWorker.schedule(this)
-        Log.v(TAG, "-onBootCompleted()")
+        FooLog.v(TAG, "-onBootCompleted()")
     }
 
     fun shutdown() {
-        Log.v(TAG, "+shutdown()")
+        FooLog.v(TAG, "+shutdown()")
         if (!isShutdown.compareAndSet(false, true)) {
-            Log.d(TAG, "shutdown: already executed")
+            FooLog.d(TAG, "shutdown: already executed")
         } else {
-            Log.v(TAG, "...")
+            FooLog.v(TAG, "...")
 //        if (this::mediaSource.isInitialized) {
 //            try {
 //                mediaSource.stop("NotifAI.shutdown")
 //            } catch (t: Throwable) {
-//                Log.w(TAG, "shutdown: mediaSource.stop failed", t)
+//                FooLog.w(TAG, "shutdown: mediaSource.stop failed", t)
 //            }
 //        }
 //        if (this::audioProfiles.isInitialized) {
 //            runCatching { audioProfiles.shutdown() }
-//                .onFailure { Log.w(TAG, "shutdown: audioProfiles.shutdown failed", it) }
+//                .onFailure { FooLog.w(TAG, "shutdown: audioProfiles.shutdown failed", it) }
 //        }
 //        if (this::appScope.isInitialized) {
 //            appScope.cancel()
@@ -51,10 +51,10 @@ class MyApp : Application() {
 //            try {
 //                db.close()
 //            } catch (t: Throwable) {
-//                Log.w(TAG, "shutdown: db.close failed", t)
+//                FooLog.w(TAG, "shutdown: db.close failed", t)
 //            }
 //        }
         }
-        Log.v(TAG, "-shutdown()")
+        FooLog.v(TAG, "-shutdown()")
     }
 }

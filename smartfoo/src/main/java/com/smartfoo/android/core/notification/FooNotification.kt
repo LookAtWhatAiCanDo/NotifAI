@@ -10,41 +10,42 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
-import android.util.Log
-import androidx.activity.compose.ManagedActivityResultLauncher
+import android.service.notification.NotificationListenerService.Ranking
+import android.service.notification.NotificationListenerService.RankingMap
+import android.service.notification.StatusBarNotification
 import androidx.core.content.ContextCompat
+import com.smartfoo.android.core.FooReflection
+import com.smartfoo.android.core.FooString
 import com.smartfoo.android.core.logging.FooLog
+import kotlin.reflect.KClass
+import kotlin.text.substring
 
 object FooNotification {
     private val TAG = FooLog.TAG(FooNotification::class)
 
-    fun notificationCancelReasonToString(reason: Int): String =
-        when (reason) {
-            NotificationListenerService.REASON_CLICK -> "REASON_CLICK"
-            NotificationListenerService.REASON_CANCEL -> "REASON_CANCEL"
-            NotificationListenerService.REASON_CANCEL_ALL -> "REASON_CANCEL_ALL"
-            NotificationListenerService.REASON_ERROR -> "REASON_ERROR"
-            NotificationListenerService.REASON_PACKAGE_CHANGED -> "REASON_PACKAGE_CHANGED"
-            NotificationListenerService.REASON_USER_STOPPED -> "REASON_USER_STOPPED"
-            NotificationListenerService.REASON_PACKAGE_BANNED -> "REASON_PACKAGE_BANNED"
-            NotificationListenerService.REASON_APP_CANCEL -> "REASON_APP_CANCEL"
-            NotificationListenerService.REASON_APP_CANCEL_ALL -> "REASON_APP_CANCEL_ALL"
-            NotificationListenerService.REASON_LISTENER_CANCEL -> "REASON_LISTENER_CANCEL"
-            NotificationListenerService.REASON_LISTENER_CANCEL_ALL -> "REASON_LISTENER_CANCEL_ALL"
-            NotificationListenerService.REASON_GROUP_SUMMARY_CANCELED -> "REASON_GROUP_SUMMARY_CANCELED"
-            NotificationListenerService.REASON_GROUP_OPTIMIZATION -> "REASON_GROUP_OPTIMIZATION"
-            NotificationListenerService.REASON_PACKAGE_SUSPENDED -> "REASON_PACKAGE_SUSPENDED"
-            NotificationListenerService.REASON_PROFILE_TURNED_OFF -> "REASON_PROFILE_TURNED_OFF"
-            NotificationListenerService.REASON_UNAUTOBUNDLED -> "REASON_UNAUTOBUNDLED"
-            NotificationListenerService.REASON_CHANNEL_BANNED -> "REASON_CHANNEL_BANNED"
-            NotificationListenerService.REASON_SNOOZED -> "REASON_SNOOZED"
-            NotificationListenerService.REASON_TIMEOUT -> "REASON_TIMEOUT"
-            NotificationListenerService.REASON_CHANNEL_REMOVED -> "REASON_CHANNEL_REMOVED"
-            NotificationListenerService.REASON_CLEAR_DATA -> "REASON_CLEAR_DATA"
-            NotificationListenerService.REASON_ASSISTANT_CANCEL -> "REASON_ASSISTANT_CANCEL"
-            NotificationListenerService.REASON_LOCKDOWN -> "REASON_LOCKDOWN"
-            else -> "UNKNOWN"
-        }.let { "$it($reason)" }
+    private val cancelReasonMap by lazy {
+        FooReflection.mapConstants(NotificationListenerService::class, "REASON_")
+    }
+
+    @JvmStatic
+    fun notificationCancelReasonToString(reason: Int) =
+        FooReflection.toString(cancelReasonMap, reason)
+
+    private val hintsMaps by lazy {
+        FooReflection.mapConstants(NotificationListenerService::class, "HINT_")
+    }
+
+    @JvmStatic
+    fun notificationHintsToString(hints: Int) =
+        FooReflection.toString(hintsMaps, hints, true)
+
+    private val interruptionFilterMap by lazy {
+        FooReflection.mapConstants(NotificationListenerService::class, "INTERRUPTION_FILTER_")
+    }
+
+    @JvmStatic
+    fun notificationInterruptionFilterToString(filter: Int) =
+        FooReflection.toString(interruptionFilterMap, filter)
 
     @JvmStatic
     fun intentAppNotificationSettings(context: Context) =
@@ -56,15 +57,6 @@ object FooNotification {
         ContextCompat
             .checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
-
-    /**
-     * Launch the POST_NOTIFICATIONS runtime permission dialog.
-     * No-op below API 33 (permission not required).
-     */
-    @JvmStatic
-    fun requestPostNotifications(launcher: ManagedActivityResultLauncher<String, Boolean>) {
-        launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-    }
 
     /**
      * Non-hidden duplicate of [android.app.Notification.FLAG_NO_DISMISS]
@@ -147,6 +139,12 @@ object FooNotification {
      */
     const val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
 
+    @JvmStatic
+    fun isNotificationListenerEnabled(
+        context: Context,
+        notificationListenerServiceClass: KClass<out NotificationListenerService>,
+    ) = isNotificationListenerEnabled(context, notificationListenerServiceClass.java)
+
     /**
      * Similar to API27 [NotificationManager.isNotificationListenerAccessGranted],
      * but not limited to "The listener service must belong to the calling app."
@@ -161,7 +159,7 @@ object FooNotification {
     ): Boolean {
         val notificationListenerServiceLookingFor =
             ComponentName(context, notificationListenerServiceClass)
-        Log.d(TAG, "isNotificationListenerEnabled: notificationListenerServiceLookingFor=$notificationListenerServiceLookingFor")
+        FooLog.d(TAG, "isNotificationListenerEnabled: notificationListenerServiceLookingFor=$notificationListenerServiceLookingFor")
 
         val notificationListenersString =
             Settings.Secure.getString(context.contentResolver, ENABLED_NOTIFICATION_LISTENERS)
@@ -169,15 +167,15 @@ object FooNotification {
             val notificationListeners = notificationListenersString.split(':').dropLastWhile { it.isEmpty() }.toTypedArray()
             for (i in notificationListeners.indices) {
                 val notificationListener = ComponentName.unflattenFromString(notificationListeners[i])
-                Log.d(TAG, "isNotificationListenerEnabled: notificationListeners[$i]=$notificationListener")
+                FooLog.d(TAG, "isNotificationListenerEnabled: notificationListeners[$i]=$notificationListener")
                 if (notificationListenerServiceLookingFor == notificationListener) {
-                    Log.i(TAG, "isNotificationListenerEnabled: found match; return true")
+                    FooLog.i(TAG, "isNotificationListenerEnabled: found match; return true")
                     return true
                 }
             }
         }
 
-        Log.w(TAG, "isNotificationListenerEnabled: found NO match; return false")
+        FooLog.w(TAG, "isNotificationListenerEnabled: found NO match; return false")
         return false
     }
 
@@ -209,17 +207,29 @@ object FooNotification {
     @JvmStatic
     fun requestNotificationListenerUnbind(
         context: Context,
+        notificationListenerServiceClass: KClass<out NotificationListenerService>,
+    ) = requestNotificationListenerUnbind(context, notificationListenerServiceClass.java)
+
+    @JvmStatic
+    fun requestNotificationListenerUnbind(
+        context: Context,
         notificationListenerServiceClass: Class<out NotificationListenerService>,
     ) {
         runCatching {
             val componentName = ComponentName(context, notificationListenerServiceClass)
-            Log.v(TAG, "requestNotificationListenerUnbind: +NotificationListenerService.requestUnbind($componentName)")
+            FooLog.v(TAG, "requestNotificationListenerUnbind: +NotificationListenerService.requestUnbind($componentName)")
             NotificationListenerService.requestUnbind(componentName)
-            Log.v(TAG, "requestNotificationListenerUnbind: -NotificationListenerService.requestUnbind($componentName)")
+            FooLog.v(TAG, "requestNotificationListenerUnbind: -NotificationListenerService.requestUnbind($componentName)")
         }.onFailure { throwable ->
-            Log.w(TAG, "requestNotificationListenerUnbind: failed", throwable)
+            FooLog.w(TAG, "requestNotificationListenerUnbind: failed", throwable)
         }
     }
+
+    @JvmStatic
+    fun requestNotificationListenerRebind(
+        context: Context,
+        notificationListenerServiceClass: KClass<out NotificationListenerService>,
+    ) = requestNotificationListenerRebind(context, notificationListenerServiceClass.java)
 
     @JvmStatic
     fun requestNotificationListenerRebind(
@@ -228,11 +238,11 @@ object FooNotification {
     ) {
         runCatching {
             val componentName = ComponentName(context, notificationListenerServiceClass)
-            Log.v(TAG, "requestNotificationListenerRebind: +NotificationListenerService.requestRebind($componentName)")
+            FooLog.v(TAG, "requestNotificationListenerRebind: +NotificationListenerService.requestRebind($componentName)")
             NotificationListenerService.requestRebind(componentName)
-            Log.v(TAG, "requestNotificationListenerRebind: -NotificationListenerService.requestRebind($componentName)")
+            FooLog.v(TAG, "requestNotificationListenerRebind: -NotificationListenerService.requestRebind($componentName)")
         }.onFailure { throwable ->
-            Log.w(TAG, "requestNotificationListenerRebind: failed", throwable)
+            FooLog.w(TAG, "requestNotificationListenerRebind: failed", throwable)
         }
     }
 
@@ -244,5 +254,99 @@ object FooNotification {
         val channelId = notification.channelId ?: return null
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         return notificationManager.getNotificationChannel(channelId)
+    }
+    @JvmStatic
+    @JvmOverloads
+    fun toString(
+        sbn: StatusBarNotification?,
+        showAllExtras: Boolean = false,
+    ): String {
+        val notification = sbn?.notification ?: return "null"
+        val extras = notification.extras
+        val title = extras?.getCharSequence(Notification.EXTRA_TITLE)
+        var text = extras?.getCharSequence(Notification.EXTRA_TEXT)
+        if (text != null) {
+            text =
+                if (text.length > 33) {
+                    "(${text.length})${
+                        FooString.quote(text.substring(0, 32))
+                            .replaceAfterLast("\"", "…\"")}"
+                } else {
+                    FooString.quote(text)
+                }
+        }
+        val subText = extras?.getCharSequence(Notification.EXTRA_SUB_TEXT)
+
+        val sb = StringBuilder("{ ")
+        if (title != null || text != null || subText != null) {
+            sb.append("extras={ ")
+        }
+        if (title != null) {
+            sb.append("${Notification.EXTRA_TITLE}=${FooString.quote(title)}")
+        }
+        if (text != null) {
+            sb.append(", ${Notification.EXTRA_TEXT}=$text")
+        }
+        if (subText != null) {
+            sb.append(", ${Notification.EXTRA_SUB_TEXT}=${FooString.quote(subText)}")
+        }
+        if (title != null || text != null || subText != null) {
+            sb.append(" }, ")
+        }
+        sb.append(
+            "id=${sbn.id}, key=${FooString.quote(sbn.key)}, packageName=${
+                FooString.quote(sbn.packageName)
+            }, notification={ $notification",
+        )
+        if (showAllExtras) {
+            sb.append(", extras=")
+            if (extras != null) {
+                extras.remove(Notification.EXTRA_TITLE)
+                extras.remove(Notification.EXTRA_TEXT)
+                extras.remove(Notification.EXTRA_SUB_TEXT)
+            }
+            sb.append(FooString.toString(extras))
+        }
+        sb.append(" } }")
+        return sb.toString()
+    }
+
+    @JvmStatic
+    fun toString(ranking: NotificationListenerService.Ranking) =
+        "{key=${ranking.key}, rank=${ranking.rank}}"
+
+    @Suppress("KotlinConstantConditions")
+    @JvmStatic
+    fun toString(rankingMap: RankingMap?): String {
+        val level = 0
+        if (rankingMap == null) {
+            return "null"
+        }
+        val sb = StringBuilder()
+        if (level > 0) {
+            sb.append("RankingMap(")
+            var first = true
+            val ranking = Ranking()
+            for (key in rankingMap.orderedKeys) {
+                if (first) {
+                    first = false
+                } else {
+                    sb.append(", ")
+                }
+                sb.append(FooString.quote(key)).append("=")
+                if (rankingMap.getRanking(key, ranking)) {
+                    when (level) {
+                        1 -> sb.append("…")
+                        2 -> sb.append(ranking.toString().substringAfterLast('$'))
+                    }
+                } else {
+                    sb.append("null")
+                }
+            }
+            sb.append(")")
+        } else {
+            sb.append("…")
+        }
+        return sb.toString()
     }
 }

@@ -20,10 +20,10 @@ object AppShutdownManager {
 
     private fun prepareForShutdown(context: Context) {
         if (!shutdownPrepared.compareAndSet(false, true)) {
-            Log.d(TAG, "prepareForShutdown: already prepared")
+            FooLog.d(TAG, "prepareForShutdown: already prepared")
             return
         }
-        Log.i(TAG, "prepareForShutdown: closing tasks and unbinding listener")
+        FooLog.i(TAG, "prepareForShutdown: closing tasks and unbinding listener")
         val activityManager = context.getSystemService(ActivityManager::class.java)
         activityManager?.appTasks?.forEach {
             runCatching { it.finishAndRemoveTask() }
@@ -41,32 +41,32 @@ object AppShutdownManager {
     }
 
     fun requestQuit(context: Context) {
-        Log.i(TAG, "requestQuit(context)")
+        FooLog.i(TAG, "requestQuit(context)")
         if (!quitting.compareAndSet(false, true)) {
-            Log.d(TAG, "requestQuit: shutdown already in progress")
+            FooLog.d(TAG, "requestQuit: shutdown already in progress")
         } else {
-            Log.i(TAG, "requestQuit: initiating app shutdown")
+            FooLog.i(TAG, "requestQuit: initiating app shutdown")
         }
         prepareForShutdown(context)
         MyForegroundNotificationService.appShutdown(context)
     }
 
     fun markQuitRequested(context: Context) {
-        Log.v(TAG, "markQuitRequested()")
+        FooLog.v(TAG, "markQuitRequested()")
         if (quitting.compareAndSet(false, true)) {
-            Log.i(TAG, "markQuitRequested: quit triggered by service command")
+            FooLog.i(TAG, "markQuitRequested: quit triggered by service command")
         }
         prepareForShutdown(context)
     }
 
     fun onForegroundNotificationServiceDestroyed(app: MyApp) {
         if (!quitting.get()) {
-            Log.d(TAG, "onForegroundNotificationServiceDestroyed: service stopped outside quit flow; ignore")
+            FooLog.d(TAG, "onForegroundNotificationServiceDestroyed: service stopped outside quit flow; ignore")
             return
         }
-        Log.i(TAG, "onForegroundNotificationServiceDestroyed: finalizing application scope")
+        FooLog.i(TAG, "onForegroundNotificationServiceDestroyed: finalizing application scope")
         app.shutdown()
-        Log.w(TAG, "onForegroundNotificationServiceDestroyed: terminating process")
+        FooLog.w(TAG, "onForegroundNotificationServiceDestroyed: terminating process")
         //android.os.Process.killProcess(android.os.Process.myPid())
         exitProcess(0)
     }

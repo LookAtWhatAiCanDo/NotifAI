@@ -23,6 +23,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "NotifAI"
+include(":smartfoo")
 include(":mobile")
 include(":wear")
- 
