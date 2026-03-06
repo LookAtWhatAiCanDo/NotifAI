@@ -10,5 +10,6 @@
     <string name="notification_action_enable">Enable</string>
     <string name="notification_action_quit">Quit</string>
     <string name="notification_action_debug_speak">Test speech</string>
+    <string name="unknown">Unknown</string>
 
 </resources>

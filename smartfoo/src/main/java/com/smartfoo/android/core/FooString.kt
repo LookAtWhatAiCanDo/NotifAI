@@ -1,9 +1,12 @@
 package com.smartfoo.android.core
 
 import android.content.Context
+import android.content.Intent
+import android.os.Bundle
 import android.text.TextUtils
 import com.smartfoo.android.core.FooString.quote
 import com.smartfoo.android.core.FooString.repr
+import com.smartfoo.android.core.platform.FooPlatformUtils
 import java.io.UnsupportedEncodingException
 import java.util.Vector
 import java.util.concurrent.TimeUnit
@@ -411,20 +414,16 @@ object FooString {
         if (value == null) {
             return "null"
         }
-
         if (typeOnly) {
             return FooReflection.getShortClassName(value)
         }
-
-        if (value is String) {
-            return "\"$value\""
+        return when (value) {
+            is String -> "\"$value\""
+            is CharSequence -> "\"$value\""
+            is Intent -> FooPlatformUtils.toString(value)
+            is Bundle -> FooPlatformUtils.toString(value)
+            else -> value.toString()
         }
-
-        if (value is CharSequence) {
-            return "\"$value\""
-        }
-
-        return value.toString()
     }
 
     @JvmStatic
@@ -455,7 +454,8 @@ object FooString {
     }
 
     @JvmStatic
-    fun toString(items: Array<Any?>?): String {
+    fun toString(items: Array<out Any?>?,
+                 formatter: (Any?) -> String = { item -> quote(item) }): String {
         val sb = StringBuilder()
 
         if (items == null) {
@@ -467,7 +467,7 @@ object FooString {
                 if (i != 0) {
                     sb.append(", ")
                 }
-                sb.append(quote(item))
+                sb.append(formatter(item))
             }
             sb.append(']')
         }

@@ -8,11 +8,14 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Message
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.NotificationListenerService.Ranking
 import android.service.notification.NotificationListenerService.RankingMap
 import android.service.notification.StatusBarNotification
+import androidx.core.app.NotificationCompat
+import androidx.core.app.Person
 import androidx.core.content.ContextCompat
 import com.smartfoo.android.core.FooReflection
 import com.smartfoo.android.core.FooString
@@ -286,7 +289,7 @@ object FooNotification {
         val sb = StringBuilder("{ ")
         sb.append("packageName=${FooString.quote(sbn.packageName)}")
         sb.append(", key=${FooString.quote(sbn.key)}")
-        sb.append(", id=${sbn.id}, ")
+        sb.append(", id=${sbn.id}")
         if (showAllExtras) {
             sb.append(", extras={")
             if (title != null) {
@@ -346,5 +349,54 @@ object FooNotification {
             sb.append("…")
         }
         return sb.toString()
+    }
+
+    @JvmStatic
+    fun toString(action: Notification.Action?): String {
+        if (action == null) {
+            return "null"
+        }
+        val parts = mutableListOf<String>()
+        action.title?.let { parts.add("title=${FooString.quote(it)}") }
+        action.actionIntent?.let { parts.add("intent=${FooString.repr(it)}") }
+        action.getIcon()?.let { parts.add("icon=${it}") }
+        action.extras.let { if (!it.isEmpty()) parts.add("extras=${FooString.repr(it)}") }
+        action.allowGeneratedReplies.let { if (it) parts.add("allowGeneratingReplies=${it}") }
+        action.remoteInputs?.let { if (!it.isEmpty()) parts.add("remoteInputs=${FooString.toString(it)}") }
+        action.semanticAction.let { if (it > 0) parts.add("semanticAction=${it}") }
+        action.isContextual.let { if (it) parts.add("isContextual=${it}") }
+        action.dataOnlyRemoteInputs?.let { if (!it.isEmpty()) parts.add("dataOnlyRemoteInputs=${FooString.toString(it)}") }
+        action.isAuthenticationRequired.let { if (it) parts.add("isAuthenticationRequired=${it}") }
+        return "Action(${parts.joinToString(", ")})"
+    }
+
+    @JvmStatic
+    fun toString(message: NotificationCompat.MessagingStyle.Message?): String {
+        if (message == null) {
+            return "null"
+        }
+        val parts = mutableListOf<String>()
+        message.timestamp.let { parts.add("timestamp=${it}") }
+        message.person?.let { parts.add("person=${toString(it)}") }
+        message.dataMimeType?.let { parts.add("dataMimeType=${FooString.quote(it)}") }
+        message.dataUri?.let { parts.add("dataUri=${FooString.repr(it)}") }
+        message.extras.let { if (!it.isEmpty()) parts.add("extras=${FooString.repr(it)}") }
+        message.text?.let { parts.add("text=${FooString.quote(it)}" ) }
+        return "Message(${parts.joinToString(", ")})"
+    }
+
+    @JvmStatic
+    fun toString(person: Person?): String {
+        if (person == null) {
+            return "null"
+        }
+        val parts = mutableListOf<String>()
+        person.name?.let { parts.add("name=${FooString.quote(it)}") }
+        person.icon?.let { parts.add("icon=${it}") }
+        person.uri?.let { parts.add("uri=${FooString.quote(it)}") }
+        person.key?.let { parts.add("key=${FooString.quote(it)}") }
+        person.isBot.let { if (it) parts.add("isBot=${it}") }
+        person.isImportant.let { if (it) parts.add("isImportant=${it}") }
+        return "Person(${parts.joinToString(", ")})"
     }
 }

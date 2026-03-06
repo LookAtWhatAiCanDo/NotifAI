@@ -60,11 +60,11 @@ class FooTextToSpeech private constructor() {
         /**
          * Main thing1 to debug
          */
-        var VERBOSE_LOG_SEQUENCE = true
+        var VERBOSE_LOG_SEQUENCE = false
         /**
          * Main thing2 to debug
          */
-        var VERBOSE_LOG_UTTERANCE = true
+        var VERBOSE_LOG_UTTERANCE = false
 
         var VERBOSE_LOG_UTTERANCE_PROGRESS = false
         var VERBOSE_LOG_AUDIO_FOCUS = false
