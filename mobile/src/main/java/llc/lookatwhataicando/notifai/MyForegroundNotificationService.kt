@@ -9,11 +9,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
-import android.provider.Settings
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.smartfoo.android.core.logging.FooLog
 import com.smartfoo.android.core.notification.FooNotification
+import com.smartfoo.android.core.platform.FooPlatformUtils
+import com.smartfoo.android.core.platform.FooPlatformUtils.fromNotificationManager
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MyForegroundNotificationService : Service() {
@@ -27,6 +27,7 @@ class MyForegroundNotificationService : Service() {
         private const val REQUEST_QUIT = 102
         private const val REQUEST_ENABLE = 103
         private const val REQUEST_DEBUG_SPEECH = 104
+        private const val REQUEST_INFO = 105
 
         private const val ACTION_APP_SHUTDOWN = "llc.lookatwhataicando.notifai.action.APP_SHUTDOWN"
         private const val ACTION_DEBUG_SPEECH_NOTIFICATION = "llc.lookatwhataicando.notifai.action.DEBUG_SPEECH_NOTIFICATION"
@@ -34,20 +35,20 @@ class MyForegroundNotificationService : Service() {
         private const val NOTIFICATION_CHANNEL_ID = "notifai_status"
         private const val NOTIFICATION_GROUP_KEY = "notifai_status_group"
 
-        private fun intent(context: Context, action: String? = null): Intent =
+        private fun intentMyForegroundNotificationService(context: Context, action: String? = null): Intent =
             Intent(context, MyForegroundNotificationService::class.java)
                 .setAction(action)
 
 
         fun startForegroundService(context: Context, action: String? = null) {
-            context.startForegroundService(intent(context, action))
+            context.startForegroundService(intentMyForegroundNotificationService(context, action))
         }
 
         // Q: Is this reentrant [OK to call multiple times], or does it need to gate?
         fun start(context: Context) = startForegroundService(context)
 
         private fun intentAppShutdown(context: Context) =
-            intent(context, ACTION_APP_SHUTDOWN)
+            intentMyForegroundNotificationService(context, ACTION_APP_SHUTDOWN)
 
         fun appShutdown(context: Context) {
             startForegroundService(context, ACTION_APP_SHUTDOWN)
@@ -167,13 +168,22 @@ class MyForegroundNotificationService : Service() {
             //.setContentText("...")
             .addAction(0, getString(R.string.notification_action_quit), pendingIntentAppShutdown)
 
+        val pendingIntentInfo = PendingIntent.getActivity(
+            this,
+            REQUEST_INFO,
+            FooPlatformUtils.intentShowAppSettings(this)
+                .fromNotificationManager(),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        builder.addAction(0, getString(R.string.notification_action_info), pendingIntentInfo)
+
         if (promptEnable) {
-            val intentEnable = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
             val pendingIntentEnable =
                 PendingIntent.getActivity(
                     this,
                     REQUEST_ENABLE,
-                    intentEnable,
+                    FooPlatformUtils.intentNotificationListenerSettings()
+                        .fromNotificationManager(),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
             builder
@@ -186,7 +196,7 @@ class MyForegroundNotificationService : Service() {
                 PendingIntent.getService(
                     this,
                     REQUEST_DEBUG_SPEECH,
-                    intent(this, ACTION_DEBUG_SPEECH_NOTIFICATION),
+                    intentMyForegroundNotificationService(this, ACTION_DEBUG_SPEECH_NOTIFICATION),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
             builder.addAction(0, getString(R.string.notification_action_debug_speak), debugIntent)
