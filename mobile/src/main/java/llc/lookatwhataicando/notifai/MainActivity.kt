@@ -356,24 +356,26 @@ fun OperationalScreen(
         MyNotificationListenerService.requestNotificationListenerRebind(context)
     }
 
+    val colors = MaterialTheme.colorScheme
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(colors.background)
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Service Running", style = MaterialTheme.typography.headlineMedium)
+        Text("Service Running", style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
         Spacer(Modifier.height(8.dp))
         Text(
             "Notification listener is active.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = colors.onSurfaceVariant
         )
         // Show pending advisories as non-blocking recommendations
         if (snapshot.advisories.isNotEmpty()) {
             Spacer(Modifier.height(24.dp))
-            Text("Recommended", style = MaterialTheme.typography.titleMedium)
+            Text("Recommended", style = MaterialTheme.typography.titleMedium, color = colors.onBackground)
             Spacer(Modifier.height(8.dp))
             if (Advisory.BATTERY_OPTIMIZATION in snapshot.advisories) {
                 AdvisoryIgnoresBatteryOptimizations()
