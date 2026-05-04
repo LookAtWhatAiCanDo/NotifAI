@@ -139,7 +139,7 @@ class MyNotificationListenerService : NotificationListenerService() {
 
     private val activeNotificationsSnapshot = ActiveNotificationsSnapshot(this)
 
-    private val handler = object : Handler(Looper.getMainLooper())
+    private val handler = Handler(Looper.getMainLooper())
 
     fun initializeActiveNotifications() {
         if (LOG_NOTIFICATION) {
