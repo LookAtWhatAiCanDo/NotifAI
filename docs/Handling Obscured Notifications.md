@@ -1,143 +1,121 @@
-# Plan: Hybrid NLS + Accessibility Correlation for Solitary Empty Notifications
+# Handling Obscured Notifications
 
-## Context
+## What is an "obscured" notification?
 
-Some apps (notably `com.google.android.apps.dynamite` / Google Chat, `com.google.android.googlequicksearchbox`) post only a single `GROUP_SUMMARY` notification with no title, text, or content extras. `NotificationListenerService` receives this and logs "No notification parts found; ignoring". The content IS visible in the notification shade and IS readable by `MyAccessibilityService`, but the two services have no bridge.
+An **obscured notification** is one whose content is absent from the
+[`NotificationListenerService`](https://developer.android.com/reference/android/service/notification/NotificationListenerService)
+(NLS) payload — no title, text, or extras — but whose content IS visible in the notification
+shade and IS readable via the
+[`AccessibilityService`](https://developer.android.com/reference/android/accessibilityservice/AccessibilityService)
+accessibility tree.
 
-The accessibility hack is only needed for **solitary empty** notifications — where no subsequent non-empty notification from the same `packageName` arrives within a short window. (Contrast: `com.qnap.qmanager` posts an empty GROUP_SUMMARY immediately followed by non-empty children — those children carry the content, so accessibility is unnecessary.)
-
-**Critical constraint:** `app_name_text` (the field that populates `ShadeRow.appName`) only appears in the accessibility tree when a notification row is **expanded**. Collapsed rows show only `[veto, title, expand_button]`. The resolution flow must programmatically expand collapsed rows until it finds the matching one.
-
-**Telemetry requirement:** "Solitary empty" events should be logged (packageName, appLabel, flags, timestamp, resolution outcome) for analytics — to grow a corpus of which apps exhibit this pattern and need bespoke handling. Firebase Analytics is preferred; local fallback is acceptable.
+This happens when an app posts a `GROUP_SUMMARY` notification that carries only metadata
+(flags, groupKey, etc.) and relies on the rendered shade row — not the NLS extras — to display
+content to the user.
 
 ---
 
-## Architecture
+## Two sub-classes of obscured notification
 
-### Stage 1 — NLS: Detect and register pending lookup (on notification arrival)
+### 1. Stale-obscured (confirmed, common)
 
-When `defaultOnNotificationPosted` returns `ParsedIgnored` for a non-system package:
-- Schedule a delayed `Runnable` (300 ms) in `pendingLookups: ConcurrentHashMap<String, Runnable>`
-- The 300 ms window absorbs child notifications that arrive immediately after the GROUP_SUMMARY
+**Behavior during live delivery (app running):**
+The app posts a silent `GROUP_SUMMARY` *immediately followed* by one or more content-bearing
+child notifications (e.g. `CHAT_CHIME`, `MessagingStyle`) within milliseconds. NLS sees both.
+The 300 ms `PENDING_LOOKUP_DELAY_MS` cancellation window in `schedulePendingLookup` gives the
+content-bearing child time to arrive and cancel the accessibility lookup before it fires.
 
-If a non-ignored notification from the same `packageName` arrives before the runnable fires:
-- Cancel it (`handler.removeCallbacks`) — real content arrived via NLS
+Result: **the normal NLS path speaks the content; no accessibility service involvement.**
 
-### Stage 2 — NLS→Accessibility: Trigger resolution
+**Behavior during stale catch-up (app just started):**
+When the app restarts and `initializeActiveNotifications` calls `getActiveNotifications()`, the
+content-bearing child notifications may already be gone — consumed, dismissed, or never
+re-posted. Only the empty `GROUP_SUMMARY` remains. No cancel arrives within 300 ms, so the
+accessibility lookup fires: the shade is opened, collapsed rows are expanded, and the row
+content is read from the accessibility tree.
 
-After 300 ms with no cancellation, call `MyAccessibilityService.instance?.findRowForAppLabel(appLabel, shadeWasOpen, callback)`.
+**Confirmed stale-obscured packages:**
+- `com.google.android.apps.dynamite` — Google Chat. Live delivery: GROUP_SUMMARY + CHAT_CHIME
+  sibling. Stale catch-up: GROUP_SUMMARY only. Accessibility is the sole source of content at
+  catch-up time.
 
-If `instance == null` (accessibility permission not granted): log and give up.
+### 2. Always-obscured (theoretical, unconfirmed)
 
-### Stage 3 — Accessibility: Expand-scan state machine
+**Hypothesis:** some apps never post a content-bearing sibling notification — not even during
+live delivery. The GROUP_SUMMARY is the only notification they ever post for a given message.
+Content is only available in the shade. These packages would require the accessibility path for
+*both* live and stale delivery, and the `PENDING_LOOKUP_DELAY_MS` cancellation window would
+never fire regardless of whether the app was just started or has been running for hours.
 
-`findRowForAppLabel` in `MyAccessibilityService` drives a state machine across accessibility events:
+**Theory on which apps this applies to:** if this category exists, it is almost certainly
+limited to **system-signed / AOSP / Google apps**. Third-party apps generally provide readable
+content in the NLS payload or in a sibling notification. System apps often have parallel
+delivery channels (e.g. FCM data messages delivered directly to the app process) and may use
+the `GROUP_SUMMARY` notification solely as a visual shade badge.
 
-1. **Check current snapshot** for any row where `appName == appLabel` → if found, return it immediately.
-2. **Open the notification shade** (if not already open via `actionNotificationsShow(true)`).
-3. **Scroll the shade to reveal all rows:** repeatedly call `container.performAction(ACTION_SCROLL_FORWARD)` until it returns `false` (end of list). Each scroll triggers an accessibility event; collect all visible row nodes after each scroll. This is required because the target row may be off-screen.
-4. **Live-traverse the shade** to collect fresh row `AccessibilityNodeInfo` objects for all visible rows.
-5. **Try each collapsed row** (those whose expand_button has `contentDescription == "Expand"`): call `rowNode.performAction(ACTION_EXPAND)`. Each expansion triggers an accessibility event; the state machine picks up on the next `onAccessibilityEvent` call.
-6. After each expansion, **re-check snapshot** for the appName match.
-7. If all rows tried with no match: invoke callback with `null`.
-8. Close shade if it was opened by this flow.
+**Currently uncharacterized packages** (appeared in logs, live vs. stale behavior not yet
+confirmed):
+- `com.google.android.googlequicksearchbox` — Google search / assistant
 
-State is held in a nullable `PendingRowSearch` field on the service instance:
-```kotlin
-private data class PendingRowSearch(
-    val appLabel: String,
-    val callback: (ShadeRow?) -> Unit,
-    var rowsToExpand: List<AccessibilityNodeInfo>,
-    val shadeOpenedByUs: Boolean
-)
-private var pendingRowSearch: PendingRowSearch? = null
+---
+
+## Detection and corpus-building
+
+`ObscuredNotificationLogger` records every accessibility lookup outcome
+(`FOUND` / `NOT_FOUND` / `ACCESSIBILITY_UNAVAILABLE`) keyed by `packageName`.
+
+To identify candidates for the **always-obscured** category, look for packages that
+consistently reach the accessibility path even during live notification delivery — not only at
+app startup. A `packageName` that triggers `findRowForAppLabel` on freshly arriving
+notifications (and consistently returns `FOUND`) is a strong candidate.
+
+---
+
+## Architecture summary
+
+```
+onNotificationPosted(sbn)
+  └─ defaultOnNotificationPosted → ParsedIgnored
+        └─ schedulePendingLookup(300 ms)
+              │
+              ├─ [live, stale-obscured] sibling child arrives within 300 ms
+              │     └─ cancelPendingLookup → spoken via NLS path
+              │
+              └─ [stale catch-up, or always-obscured live] 300 ms elapses with no cancel
+                    └─ MyAccessibilityService.findRowForAppLabel(appLabel)
+                          └─ ShadeRowSearchQueue: open shade → expand rows → match appName
+                                └─ callback → speakShadeRows → TTS
 ```
 
-`onAccessibilityEvent` checks `pendingRowSearch` after every normal snapshot update and advances the state machine.
-
-### Stage 4 — NLS: Speak the result
-
-The callback (called on the main thread via the accessibility service) delivers the matched `ShadeRow` back to `MyNotificationListenerService.speakShadeRow()`.
-
-```kotlin
-private fun speakShadeRow(appLabel: String, row: MyAccessibilityService.ShadeRow) {
-    val builder = FooTextToSpeechBuilder(appLabel)
-    row.title?.let { builder.appendSilenceWordBreak(); builder.appendSpeech(it) }
-    if (row.messages.isNotEmpty()) {
-        row.messages.forEach { builder.appendSilenceWordBreak(); builder.appendSpeech(it) }
-    } else {
-        row.text?.let { builder.appendSilenceWordBreak(); builder.appendSpeech(it) }
-    }
-    parserCallbacks.textToSpeech?.speak(builder)
-}
-```
+Multiple concurrent `findRowForAppLabel` calls (e.g. Chat and Google both firing within 30 ms
+at startup) are serialized by `ShadeRowSearchQueue` — each search waits for the previous to
+finish before the shade is handed to it.
 
 ---
 
-## Telemetry / Generic Framework
+## Key constants
 
-### `ObscuredNotification` event data class (new file)
-```kotlin
-data class ObscuredNotification(
-    val packageName: String,
-    val appLabel: String,
-    val notificationFlags: Int,  // Notification.FLAG_GROUP_SUMMARY etc.
-    val postedAtMs: Long,
-    val resolutionOutcome: ResolutionOutcome,  // FOUND / NOT_FOUND / ACCESSIBILITY_UNAVAILABLE
-)
-enum class ResolutionOutcome { FOUND, NOT_FOUND, ACCESSIBILITY_UNAVAILABLE }
-```
+| Constant | Location | Value | Purpose |
+|---|---|---|---|
+| `PENDING_LOOKUP_DELAY_MS` | `MyNotificationListenerService` | 300 ms | Window for content-bearing child to cancel the accessibility lookup |
+| `ShadeDelays.FAST.shadeSettle` | `ShadeDelays` | 600 ms | Shade animation settle time (production) |
+| `ShadeDelays.SLOW.shadeSettle` | `ShadeDelays` | 3000 ms | Shade animation settle time (debug/observation) |
+| `ShadeDelays.FAST.preExpand` | `ShadeDelays` | 0 ms | Pause before each row expansion (production) |
+| `ShadeDelays.SLOW.preExpand` | `ShadeDelays` | 2000 ms | Pause before each row expansion (debug/observation) |
+| `MAX_SCROLL_ATTEMPTS` | `ShadeRowSearchQueue` | 10 | Max scroll attempts before giving up on off-screen rows |
 
-### `ObscuredNotificationLogger` (new singleton object)
-- `fun log(event: ObscuredNotification)` — persists to **Firebase Firestore** (structured, queryable) and also emits to Firebase Analytics (for visualization/dashboards)
-- **Firestore schema:** collection `obscured_notifications`, document keyed by `packageName`; fields: `appLabel`, `firstSeenMs`, `lastSeenMs`, `count`, `knownOutcomes: Map<ResolutionOutcome, Int>`
-- Also keeps a running in-memory set of seen `packageName`s so repeat occurrences do not create duplicate Firestore documents (upsert/merge strategy)
-- Firebase Analytics event: `"obscured_notification"` with params `package_name`, `app_label`, `outcome`
-
-This is the mechanism by which packages that require special handling are discovered and catalogued. Once a package appears frequently enough in Firestore, a bespoke `NotificationParser` subclass can be registered for it in `MyNotificationListenerService.addNotificationParser()`.
+Toggle `MyAccessibilityService.DEBUG_SLOW_MODE = true` to use the SLOW delays for visual
+step-by-step observation of the shade automation. Set false and confirm FAST values once
+minimum working delays are established.
 
 ---
 
-## Files to Modify / Create
+## Known limitations
 
-| File | Change |
-|------|--------|
-| `MyAccessibilityService.kt` | Add `shadeSnapshot` to companion; add `PendingRowSearch` state; add `findRowForAppLabel()` + `getLiveRowNodes()` methods; advance state machine in `onAccessibilityEvent` |
-| `MyNotificationListenerService.kt` | Add `pendingLookups` map + `handler` usage; modify `onNotificationPosted` to schedule/cancel; add `speakShadeRow()` |
-| *(new)* `notification/ObscuredNotification.kt` | Data class + `ResolutionOutcome` enum |
-| *(new)* `notification/ObscuredNotificationLogger.kt` | Logger singleton; Firestore structured storage + Firebase Analytics |
-
----
-
-## Key Constants
-
-```kotlin
-const val PENDING_LOOKUP_DELAY_MS    = 300L   // window for child notifications to cancel lookup
-const val SHADE_OPEN_SETTLE_DELAY_MS = 600L   // time for shade accessibility events to fire after open
-```
-
----
-
-## Known Limitations (out of scope)
-
-- **Multi-account apps:** If two accounts of the same app post GROUP_SUMMARY simultaneously, the first matched row wins.
-- **Screen locked (v2):** When the screen is locked, the notification may still appear on the lock screen but expand/collapse behavior via accessibility is unknown — may be a dead end. Weak v2 fallback: detect the locked state and speak something like `"Google Chat; please unlock your phone to read it"` rather than silently giving up.
-- **gmail (`com.google.android.gm`):** Sends `tickerText="2 new messages"` so NLS already has partial content; will need a separate accessibility-assisted hack and is tracked separately.
-
----
-
-## Verification
-
-1. **Google Chat message arrives:**
-   - NLS logs `No notification parts found; ignoring` for `com.google.android.apps.dynamite`
-   - 300 ms later: `findRowForAppLabel("Chat", ...)` is called on `MyAccessibilityService`
-   - If shade has expanded Chat row: TTS speaks `"Chat [pause] Carol Micek [pause] <message>"`
-   - If Chat row is collapsed: `performAction(ACTION_EXPAND)` fires on it, accessibility event triggers, row is now expanded, TTS speaks
-   - `SolitaryEmptyNotificationLogger` logs the event with outcome `FOUND`
-2. **Qmanager batch arrives:**
-   - Empty GROUP_SUMMARY schedules lookup
-   - Non-empty child notification arrives within 300 ms → lookup cancelled
-   - TTS speaks via normal NLS path; no accessibility invocation
-3. **Accessibility service not granted:**
-   - `instance == null` → logs `ACCESSIBILITY_UNAVAILABLE` → no crash
-4. **No regression:** Discord, Android Messages, and other notifications behave as before
+- **Multi-account apps:** if two accounts of the same app post GROUP_SUMMARY simultaneously,
+  the first matching shade row wins; the second is not spoken.
+- **Screen locked:** when the screen is locked, expand/collapse behavior via the accessibility
+  tree is unknown and the shade row content may be unavailable.
+- **`com.google.android.gm` (Gmail):** sends `tickerText` with partial content via NLS; the
+  accessibility path is not currently required but a bespoke `NotificationParser` may improve
+  the spoken output.

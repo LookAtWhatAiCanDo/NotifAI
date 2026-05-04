@@ -139,6 +139,8 @@ class MyNotificationListenerService : NotificationListenerService() {
 
     private val activeNotificationsSnapshot = ActiveNotificationsSnapshot(this)
 
+    private val handler = object : Handler(Looper.getMainLooper())
+
     fun initializeActiveNotifications() {
         if (LOG_NOTIFICATION) {
             FooLog.v(TAG, "#NOTIFICATION +initializeActiveNotifications()")
@@ -308,16 +310,22 @@ class MyNotificationListenerService : NotificationListenerService() {
 
         pendingLookups[packageName] = runnable
         handler.postDelayed(runnable, PENDING_LOOKUP_DELAY_MS)
-        // Live vs. launch behavior:
-        //   Live  — apps like Google Chat post GROUP_SUMMARY then a content-bearing child
-        //           within milliseconds. The child arrives at onNotificationPosted and hits
-        //           the `else` branch above, cancelling this runnable before it fires.
-        //           MyAccessibilityService is NOT involved for live notifications.
-        //   Launch — initializeActiveNotifications iterates getActiveNotifications(). The
-        //           content-bearing child may already be gone; only GROUP_SUMMARY is active.
-        //           No cancel arrives → this runnable fires → MyAccessibilityService opens
-        //           the shade and reads the row. This is the primary reason the Accessibility
-        //           permission is required.
+        // Stale-obscured (confirmed, e.g. com.google.android.apps.dynamite / Google Chat):
+        //   Live  — GROUP_SUMMARY is immediately followed by a content-bearing child
+        //           (CHAT_CHIME, MessagingStyle, etc.) within milliseconds. That child arrives
+        //           at onNotificationPosted, hits the `else` branch above, and cancels this
+        //           runnable before it fires. MyAccessibilityService is NOT involved.
+        //   Stale — initializeActiveNotifications iterates getActiveNotifications(). The
+        //           content-bearing child has already been dismissed; only the empty
+        //           GROUP_SUMMARY is active. No cancel arrives → this runnable fires →
+        //           MyAccessibilityService opens the shade and reads the row.
+        //           This is the primary reason the Accessibility permission is required.
+        //
+        // Always-obscured (theoretical, unconfirmed):
+        //   Some apps may never post a content-bearing sibling — not even for live delivery.
+        //   This runnable would always fire for those packages. Theory: if this class of app
+        //   exists, it is limited to system-signed / AOSP / Google apps. See
+        //   ObscuredNotificationLogger and notification/parsers/README.md for detection.
     }
 
     private fun cancelPendingLookup(packageName: String) {

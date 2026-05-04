@@ -17,7 +17,7 @@ import com.smartfoo.android.core.logging.FooLog
  * content-bearing child cancel any pending accessibility lookup before it fires. Result: content
  * is spoken via the normal NLS path with **no accessibility service involvement**.
  *
- * ### Launch / catch-up (app just started)
+ * ### Launch / catch-up (app just started) — primary scenario
  * When the app launches and iterates `getActiveNotifications()`, the content-bearing child
  * notifications may already be gone — consumed/dismissed after the previous app instance
  * processed them, or simply never re-posted. Only the empty `GROUP_SUMMARY` remains. NLS cannot
@@ -25,14 +25,24 @@ import com.smartfoo.android.core.logging.FooLog
  * required:** it opens the notification shade, expands any collapsed rows, and reads their
  * content via the accessibility tree so the app can speak notifications it missed.
  *
+ * See [llc.lookatwhataicando.notifai.notification.ObscuredNotification] for the confirmed
+ * package `com.google.android.apps.dynamite` (Google Chat) and the stale-obscured model.
+ *
+ * ### Always-obscured live notifications — theoretical, unconfirmed
+ * Some apps may never post a content-bearing sibling notification — not even during live
+ * delivery. For these packages the accessibility path would fire unconditionally (both live
+ * and stale). If this category exists, it is theorized to be limited to system-signed / AOSP /
+ * Google apps. See `notification/parsers/README.md` for detection guidance.
+ *
  * ### Secondary capability
  * Provides global navigation actions (open/dismiss shade, back, home, screenshot, media
  * play/pause) that NLS does not expose.
  *
  * ### Practical impact without this permission
- * Live notifications work correctly. Only the launch catch-up path for "obscured" notifications
- * (see [llc.lookatwhataicando.notifai.notification.ObscuredNotification]) is degraded — the
- * app silently skips any notification whose content was only ever in the shade.
+ * Live notifications from stale-obscured apps work correctly (NLS reads their content-bearing
+ * sibling). Only the launch catch-up path is degraded — the app silently skips stale obscured
+ * notifications whose content-bearing child is already gone. If any always-obscured apps exist,
+ * their live notifications would also be lost without this permission.
  *
  * ---
  *
