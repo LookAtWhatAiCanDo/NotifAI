@@ -5,6 +5,9 @@ import android.annotation.SuppressLint
 import android.view.accessibility.AccessibilityEvent
 import androidx.annotation.RequiresApi
 import com.smartfoo.android.core.logging.FooLog
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.COM_ANDROID_SYSTEMUI
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.ShadeRow
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.snapshotShade
 
 /**
  * ## Behavioral ground truth — when and why this service is needed

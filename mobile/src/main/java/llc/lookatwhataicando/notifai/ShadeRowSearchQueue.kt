@@ -5,6 +5,12 @@ import android.os.Looper
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import com.smartfoo.android.core.logging.FooLog
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.EXPAND_BUTTON_DESC
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.ShadeRow
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.findContainerNode
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.findDirectRowButton
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.findRawRowWithAppName
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.getLiveRowNodes
 
 /**
  * Serializes asynchronous notification shade row searches for [MyAccessibilityService].
@@ -119,7 +125,7 @@ internal class ShadeRowSearchQueue(
     fun advancePendingRowSearch(root: AccessibilityNodeInfo) {
         val search = queue.firstOrNull() ?: return
 
-        // A settle window is in-flight (pre/post-expand or post-scroll); ignore events until it clears.
+        // A settle window is in-flight (pre-/post-expand or post-scroll); ignore events until it clears.
         if (search.settling) return
 
         val match = getLastSnapshot().firstOrNull { it.appName.equals(search.appLabel, ignoreCase = true) }

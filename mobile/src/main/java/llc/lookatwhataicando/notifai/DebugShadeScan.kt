@@ -5,6 +5,13 @@ import android.os.Looper
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import com.smartfoo.android.core.logging.FooLog
+import llc.lookatwhataicando.notifai.DebugShadeScan.Companion.EXPAND_SETTLE_MS
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.COLLAPSE_BUTTON_DESC
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.EXPAND_BUTTON_DESC
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.ShadeRow
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.findDirectRowButton
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.getLiveContainerNode
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.getLiveRowNodes
 
 /**
  * Full top-to-bottom shade scan used when [MyAccessibilityService.DEBUG_FULL_SCAN_MODE] is true.

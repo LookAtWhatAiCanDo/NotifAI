@@ -4,6 +4,9 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.smartfoo.android.core.notification.FooNotification
+import com.smartfoo.android.core.permission.FooPermission
+import com.smartfoo.android.core.platform.FooPlatformUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,9 +17,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import llc.lookatwhataicando.notifai.MyAccessibilityService
 import llc.lookatwhataicando.notifai.MyNotificationListenerService
-import com.smartfoo.android.core.notification.FooNotification
-import com.smartfoo.android.core.permission.FooPermission
-import com.smartfoo.android.core.platform.FooPlatformUtils
 
 /**
  * Requirement  = hard gate. App cannot function without these.

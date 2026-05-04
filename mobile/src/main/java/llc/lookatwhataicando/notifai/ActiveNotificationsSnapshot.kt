@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.content.Context
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import com.smartfoo.android.core.FooString
 import com.smartfoo.android.core.logging.FooLog
 import com.smartfoo.android.core.notification.FooNotification
 

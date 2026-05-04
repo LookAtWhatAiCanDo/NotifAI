@@ -8,7 +8,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Message
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.NotificationListenerService.Ranking
@@ -22,7 +21,6 @@ import com.smartfoo.android.core.FooString
 import com.smartfoo.android.core.logging.FooLog
 import com.smartfoo.android.core.platform.FooPlatformUtils.fromNotificationManager
 import kotlin.reflect.KClass
-import kotlin.text.substring
 
 object FooNotification {
     private val TAG = FooLog.TAG(FooNotification::class)

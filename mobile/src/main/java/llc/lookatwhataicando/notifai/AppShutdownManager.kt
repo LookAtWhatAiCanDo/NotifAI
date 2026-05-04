@@ -2,7 +2,6 @@ package llc.lookatwhataicando.notifai
 
 import android.app.ActivityManager
 import android.content.Context
-import android.util.Log
 import com.smartfoo.android.core.logging.FooLog
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.system.exitProcess

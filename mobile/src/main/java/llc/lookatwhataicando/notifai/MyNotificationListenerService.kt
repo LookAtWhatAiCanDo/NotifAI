@@ -1,13 +1,10 @@
 package llc.lookatwhataicando.notifai
 
-import android.accessibilityservice.AccessibilityService
 import android.app.NotificationChannel
 import android.app.NotificationChannelGroup
 import android.content.Context
-import android.content.pm.ApplicationInfo
 import android.os.Handler
 import android.os.Looper
-import android.os.Message
 import android.os.UserHandle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -17,14 +14,15 @@ import com.smartfoo.android.core.logging.FooLog
 import com.smartfoo.android.core.notification.FooNotification
 import com.smartfoo.android.core.platform.FooPlatformUtils
 import com.smartfoo.android.core.texttospeech.FooTextToSpeechBuilder
+import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.ShadeRow
 import llc.lookatwhataicando.notifai.notification.NotificationParserUtils
 import llc.lookatwhataicando.notifai.notification.ObscuredNotification
 import llc.lookatwhataicando.notifai.notification.ObscuredNotificationLogger
 import llc.lookatwhataicando.notifai.notification.ResolutionOutcome
-import llc.lookatwhataicando.notifai.startup.Requirement
 import llc.lookatwhataicando.notifai.notification.parsers.NotificationParser
 import llc.lookatwhataicando.notifai.notification.parsers.NotificationParserAndroidMessages
 import llc.lookatwhataicando.notifai.notification.parsers.NotificationParserDiscord
+import llc.lookatwhataicando.notifai.startup.Requirement
 import java.util.concurrent.ConcurrentHashMap
 
 class MyNotificationListenerService : NotificationListenerService() {

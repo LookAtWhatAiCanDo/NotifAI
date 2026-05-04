@@ -1,6 +1,7 @@
 package llc.lookatwhataicando.notifai.notification
 
 import com.smartfoo.android.core.logging.FooLog
+import llc.lookatwhataicando.notifai.notification.ObscuredNotificationLogger.sink
 
 /**
  * Sink for [ObscuredNotification] telemetry.

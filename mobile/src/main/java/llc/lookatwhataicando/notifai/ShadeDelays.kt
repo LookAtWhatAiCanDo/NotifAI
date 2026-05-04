@@ -1,5 +1,9 @@
 package llc.lookatwhataicando.notifai
 
+import llc.lookatwhataicando.notifai.ShadeDelays.Companion.FAST
+import llc.lookatwhataicando.notifai.ShadeDelays.Companion.SLOW
+
+
 /**
  * Timing constants for the notification shade accessibility state machine.
  *

@@ -6,11 +6,11 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
+import com.smartfoo.android.core.notification.FooNotification
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import com.smartfoo.android.core.notification.FooNotification
 
 /**
  * Reactive Flow that emits whenever the system's enabled_notification_listeners

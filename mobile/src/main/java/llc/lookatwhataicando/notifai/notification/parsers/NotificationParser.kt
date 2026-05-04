@@ -3,8 +3,6 @@ package llc.lookatwhataicando.notifai.notification.parsers
 import android.app.Notification
 import android.content.Context
 import android.service.notification.StatusBarNotification
-import android.view.View
-import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.smartfoo.android.core.FooString
 import com.smartfoo.android.core.logging.FooLog
