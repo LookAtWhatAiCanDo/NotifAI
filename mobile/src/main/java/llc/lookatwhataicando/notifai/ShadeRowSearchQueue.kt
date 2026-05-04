@@ -5,10 +5,8 @@ import android.os.Looper
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import com.smartfoo.android.core.logging.FooLog
-import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.EXPAND_BUTTON_DESC
 import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.ShadeRow
 import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.findContainerNode
-import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.findDirectRowButton
 import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.findRawRowWithAppName
 import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.getLiveRowNodes
 
@@ -132,12 +130,11 @@ internal class ShadeRowSearchQueue(
         if (match != null) {
             if (!search.rowExpanded) {
                 // The row may be a collapsed group summary. Expand it first so we capture all
-                // child notifications. Use findDirectRowButton (not a subtree search) so we don't
-                // mistake a child row's chevron for the parent's — which would toggle it back to
-                // collapsed (expand→collapse→expand loop).
+                // child notifications. ACTION_EXPAND is locale-agnostic and only present on the
+                // row node itself when it is actually collapsed — no child-row confusion.
                 val rawNode = findRawRowWithAppName(search.appLabel, getWindows())
-                val expandBtn = rawNode?.let { findDirectRowButton(it, EXPAND_BUTTON_DESC) }
-                if (expandBtn != null) {
+                val isCollapsed = rawNode?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_EXPAND } == true
+                if (isCollapsed) {
                     if (delays.preExpand > 0) {
                         FooLog.v(TAG, "advancePendingRowSearch: pausing ${delays.preExpand}ms before expanding ${search.appLabel}")
                         search.settling = true
@@ -145,17 +142,17 @@ internal class ShadeRowSearchQueue(
                             val s = queue.firstOrNull() ?: return@postDelayed
                             if (s !== search) return@postDelayed
                             s.settling = false
-                            val freshBtn = findRawRowWithAppName(s.appLabel, getWindows())
-                                ?.let { findDirectRowButton(it, EXPAND_BUTTON_DESC) }
-                            if (freshBtn != null) {
+                            val freshNode = findRawRowWithAppName(s.appLabel, getWindows())
+                            val freshIsCollapsed = freshNode?.actionList?.any { it.id == AccessibilityNodeInfo.ACTION_EXPAND } == true
+                            if (freshIsCollapsed) {
                                 FooLog.v(TAG, "advancePendingRowSearch: now expanding ${s.appLabel}")
-                                freshBtn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                                freshNode!!.performAction(AccessibilityNodeInfo.ACTION_EXPAND)
                                 s.rowExpanded = true
                             }
                         }, delays.preExpand)
                     } else {
                         FooLog.v(TAG, "advancePendingRowSearch: expanding ${search.appLabel} before reading content")
-                        expandBtn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                        rawNode!!.performAction(AccessibilityNodeInfo.ACTION_EXPAND)
                         search.rowExpanded = true
                     }
                     return
@@ -200,18 +197,17 @@ internal class ShadeRowSearchQueue(
     }
 
     /**
-     * Pops the next row from [PendingRowSearch.rowsToExpand] and clicks its direct Expand chevron
-     * if it is collapsed. Uses [findDirectRowButton] so we don't descend into nested
-     * [expandableNotificationRow] children and find their chevrons instead.
-     * Already-expanded rows are skipped silently.
+     * Pops the next row from [PendingRowSearch.rowsToExpand] and performs ACTION_EXPAND on it
+     * if it is collapsed (ACTION_EXPAND present in actionList). Locale-agnostic — no string
+     * matching. Already-expanded rows (ACTION_COLLAPSE present) are skipped silently.
      */
     private fun tryExpandNextRow(search: PendingRowSearch) {
         while (search.rowsToExpand.isNotEmpty()) {
             val row = search.rowsToExpand.removeAt(0)
-            val expandBtn = findDirectRowButton(row, EXPAND_BUTTON_DESC)
-            if (expandBtn != null) {
-                val clicked = expandBtn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                FooLog.v(TAG, "tryExpandNextRow: ACTION_CLICK on Expand result=$clicked for ${row.viewIdResourceName}")
+            val isCollapsed = row.actionList.any { it.id == AccessibilityNodeInfo.ACTION_EXPAND }
+            if (isCollapsed) {
+                val expanded = row.performAction(AccessibilityNodeInfo.ACTION_EXPAND)
+                FooLog.v(TAG, "tryExpandNextRow: ACTION_EXPAND result=$expanded for ${row.viewIdResourceName}")
                 if (delays.preExpand > 0) {
                     search.settling = true
                     mainHandler.postDelayed({

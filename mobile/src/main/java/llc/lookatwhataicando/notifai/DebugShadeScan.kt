@@ -6,10 +6,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import com.smartfoo.android.core.logging.FooLog
 import llc.lookatwhataicando.notifai.DebugShadeScan.Companion.EXPAND_SETTLE_MS
-import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.COLLAPSE_BUTTON_DESC
-import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.EXPAND_BUTTON_DESC
 import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.ShadeRow
-import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.findDirectRowButton
 import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.getLiveContainerNode
 import llc.lookatwhataicando.notifai.NotificationShadeSnapshot.getLiveRowNodes
 
@@ -58,11 +55,11 @@ internal class DebugShadeScan(
     /**
      * Expands collapsed rows one at a time, each separated by [EXPAND_SETTLE_MS].
      *
-     * Each call scans all visible rows via [findDirectRowButton]:
-     *  - Already expanded ("Collapse" button): skip.
-     *  - Collapsed ("Expand" button): click chevron, schedule next pass after [EXPAND_SETTLE_MS],
+     * Each call scans all visible rows via actionList:
+     *  - Already expanded (ACTION_COLLAPSE present): skip.
+     *  - Collapsed (ACTION_EXPAND present): expand row, schedule next pass after [EXPAND_SETTLE_MS],
      *    then RETURN — only one expansion per delay interval.
-     *  - No chevron: skip.
+     *  - Neither action: skip.
      *
      * Once no collapsed row is found, proceeds to [debugScanCollect].
      * Guarded by [expandPassesLeft] to prevent an unbounded loop.
@@ -75,10 +72,9 @@ internal class DebugShadeScan(
         val rows = getLiveRowNodes(getWindows())
         FooLog.v(TAG, "debugScanPass: ${rows.size} rows visible (expandPassesLeft=$expandPassesLeft)")
         rows.forEachIndexed { _, rowNode ->
-            if (findDirectRowButton(rowNode, COLLAPSE_BUTTON_DESC) != null) return@forEachIndexed
-            val expandBtn = findDirectRowButton(rowNode, EXPAND_BUTTON_DESC)
-            if (expandBtn != null) {
-                expandBtn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            if (rowNode.actionList.any { it.id == AccessibilityNodeInfo.ACTION_COLLAPSE }) return@forEachIndexed
+            if (rowNode.actionList.any { it.id == AccessibilityNodeInfo.ACTION_EXPAND }) {
+                rowNode.performAction(AccessibilityNodeInfo.ACTION_EXPAND)
                 if (expandPassesLeft > 0) {
                     mainHandler.postDelayed(
                         { debugScanPass(accumulated, scrollAttemptsLeft, expandPassesLeft - 1) },

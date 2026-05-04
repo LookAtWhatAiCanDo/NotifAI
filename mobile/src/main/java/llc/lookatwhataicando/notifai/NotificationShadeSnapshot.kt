@@ -43,12 +43,6 @@ object NotificationShadeSnapshot {
         "expandableNotificationRow", // AOSP / Pixel (confirmed)
     )
 
-    /** Content-description on the chevron button of a collapsed notification row. */
-    internal const val EXPAND_BUTTON_DESC = "Expand"
-
-    /** Content-description on the chevron button of an already-expanded notification row. */
-    internal const val COLLAPSE_BUTTON_DESC = "Collapse"
-
     private const val DEBUG_DUMP_WINDOWS = false
     private const val VERBOSE_LOG_CONTAINER_NOT_FOUND = false
 
@@ -316,29 +310,4 @@ object NotificationShadeSnapshot {
         return false
     }
 
-    /**
-     * Finds the expand/collapse chevron button that belongs **directly** to this notification
-     * row — i.e. the button whose [contentDescription] matches [desc] — without descending into
-     * nested [expandableNotificationRow] children, which have their own independent chevrons.
-     *
-     * This prevents falsely detecting a child row's "Expand" button as belonging to an
-     * already-expanded parent GROUP_SUMMARY, which would cause ACTION_CLICK on the parent to
-     * toggle it back to collapsed (expand→collapse→expand… loop).
-     *
-     * @param isRoot  true only for the top-level call; child expandableNotificationRow nodes
-     *                stop recursion immediately.
-     */
-    internal fun findDirectRowButton(
-        node: AccessibilityNodeInfo,
-        desc: String,
-        isRoot: Boolean = true,
-    ): AccessibilityNodeInfo? {
-        if (!isRoot && NOTIFICATION_ROW_ID_SUFFIXES.any { node.viewIdResourceName?.endsWith(it) == true }) return null
-        if (node.contentDescription?.toString() == desc) return node
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            findDirectRowButton(child, desc, isRoot = false)?.let { return it }
-        }
-        return null
-    }
 }
