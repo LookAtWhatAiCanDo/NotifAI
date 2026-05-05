@@ -1,8 +1,12 @@
 package llc.lookatwhataicando.notifai.startup
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.smartfoo.android.core.notification.FooNotification
+import com.smartfoo.android.core.permission.FooPermission
+import com.smartfoo.android.core.platform.FooPlatformUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -11,16 +15,57 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import llc.lookatwhataicando.notifai.MyAccessibilityService
 import llc.lookatwhataicando.notifai.MyNotificationListenerService
-import com.smartfoo.android.core.notification.FooNotification
-import com.smartfoo.android.core.permission.FooPermission
 
 /**
  * Requirement  = hard gate. App cannot function without these.
  */
 enum class Requirement {
     POST_NOTIFICATIONS,      // Runtime permission (API 33+ only)
-    NOTIFICATION_LISTENER    // Settings-mediated special access
+    NOTIFICATION_LISTENER,   // Settings-mediated special access
+
+    /**
+     * Settings-mediated special access.
+     *
+     * ## Why this is required
+     *
+     * **Live notifications** (arriving while the app is running) are handled entirely by
+     * [MyNotificationListenerService] (NLS). When an app like Google Chat posts a silent
+     * GROUP_SUMMARY followed by a content-bearing child notification, NLS sees both within
+     * milliseconds and the 300 ms cancellation window in [MyNotificationListenerService]
+     * ensures the content is spoken via the normal NLS path. No accessibility involvement.
+     *
+     * **Launch / catch-up** is where [MyAccessibilityService] becomes necessary. When the app
+     * starts and iterates [android.service.notification.NotificationListenerService.getActiveNotifications],
+     * the content-bearing child notifications may already be gone — only the empty GROUP_SUMMARY
+     * remains active. NLS cannot read its content. [MyAccessibilityService] opens the notification
+     * shade, expands collapsed rows, and reads the content via the accessibility tree.
+     *
+     * ## Secondary capability
+     *
+     * [MyAccessibilityService] also provides global navigation actions (open/dismiss shade,
+     * back, home, screenshot) that NLS does not have access to.
+     *
+     * ## Practical impact
+     *
+     * This is a **hard requirement**. [MyNotificationListenerService.areRequirementsMet] gates all
+     * NLS processing on every [Requirement] being satisfied, including this one. Without
+     * Accessibility the NLS stays idle: no live notifications are spoken and no launch catch-up
+     * occurs. The UI reflects this by blocking the operational screen until this is granted.
+     */
+    ACCESSIBILITY_SERVICE;
+
+    companion object {
+        fun missing(context: Context): Set<Requirement> = buildSet {
+            if (!FooNotification.isPostNotificationsPermissionGranted(context))
+                add(POST_NOTIFICATIONS)
+            if (!MyNotificationListenerService.isNotificationListenerEnabled(context))
+                add(NOTIFICATION_LISTENER)
+            if (!FooPlatformUtils.isAccessibilityServiceEnabled(context, MyAccessibilityService::class.java))
+                add(ACCESSIBILITY_SERVICE)
+        }
+    }
 }
 
 /**
@@ -110,10 +155,7 @@ class StartupCoordinator(private val app: Application) : AndroidViewModel(app) {
      *  - After ListenerEnabledMonitor emits (via collect above)
      */
     fun recheck() {
-        val missing = buildSet {
-            if (!FooNotification.isPostNotificationsPermissionGranted(app)) add(Requirement.POST_NOTIFICATIONS)
-            if (!MyNotificationListenerService.isNotificationListenerEnabled(app)) add(Requirement.NOTIFICATION_LISTENER)
-        }
+        val missing = Requirement.missing(app)
 
         val advisories = buildSet {
             if (!FooPermission.isIgnoringBatteryOptimizations(app)) add(Advisory.BATTERY_OPTIMIZATION)

@@ -299,6 +299,23 @@ fun PermissionsGateScreen(
                 onClick = { FooNotification.startActivityNotificationListenerSettings(context) }
             ) else null
         )
+        Spacer(Modifier.height(12.dp))
+        // ── Required ACCESSIBILITY_SERVICE card ──────────────────────
+        val accessibilityMissing = Requirement.ACCESSIBILITY_SERVICE in snapshot.missing
+        RequirementCard(
+            icon        = Icons.Outlined.Lock,
+            title       = "Accessibility Service",
+            description = "Required for all notification processing. Without this, no " +
+                    "notifications are spoken — not live arrivals, nor launch catch-up. " +
+                    "Also enables reading content from apps like Google Chat that don't " +
+                    "expose it via standard APIs. " +
+                    "Enable `NotifAI` in the Accessibility settings that open.",
+            isMissing   = accessibilityMissing,
+            primaryAction = if (accessibilityMissing) PermissionAction(
+                label   = "Enable NotifAI Accessibility",
+                onClick = { FooPlatformUtils.showAccessibilitySettings(context) }
+            ) else null
+        )
         // ── Recommended BATTERY_OPTIMIZATION card ────────────────────
         if (forceShowAdvisories || Advisory.BATTERY_OPTIMIZATION in snapshot.advisories) {
             Spacer(Modifier.height(12.dp))

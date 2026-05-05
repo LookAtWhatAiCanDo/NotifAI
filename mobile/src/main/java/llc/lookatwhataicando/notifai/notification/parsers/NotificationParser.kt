@@ -3,8 +3,6 @@ package llc.lookatwhataicando.notifai.notification.parsers
 import android.app.Notification
 import android.content.Context
 import android.service.notification.StatusBarNotification
-import android.view.View
-import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.smartfoo.android.core.FooString
 import com.smartfoo.android.core.logging.FooLog
@@ -135,10 +133,6 @@ abstract class NotificationParser(private val hashtag: String, protected val par
             val category = notification.category
             FooLog.v(TAG, "defaultOnNotificationPosted: category=$category")
 
-            if (textToSpeechManager == null) {
-                return NotificationParseResult.ParsedIgnored
-            }
-
             if (builder.numberOfParts == 1) {
                 //
                 // Found nothing in the above [currently commented out] bespoke parsing,
@@ -184,11 +178,18 @@ abstract class NotificationParser(private val hashtag: String, protected val par
                 }
             }
 
+            // TODO: Clean up this ugly logic...
+
+            if (textToSpeechManager == null) {
+                FooLog.w(TAG, "defaultOnNotificationPosted: textToSpeechManager == null; ignore and return ParsedIgnored")
+                return NotificationParseResult.ParsedIgnored
+            }
+
             if (builder.numberOfParts > 1) {
                 textToSpeechManager.speak(builder)
             } else {
-                FooLog.w(TAG, "defaultOnNotificationPosted: No notification parts found; ignoring")
-                return NotificationParseResult.ParsedIgnored
+                FooLog.w(TAG, "defaultOnNotificationPosted: No notification parts found; ignore and return ParsedEmpty")
+                return NotificationParseResult.ParsedEmpty
             }
 
             return NotificationParseResult.DefaultWithTickerText
@@ -203,6 +204,7 @@ abstract class NotificationParser(private val hashtag: String, protected val par
         DefaultWithTickerText,
         DefaultWithoutTickerText,
         Unparsable,
+        ParsedEmpty,
         ParsedIgnored,
         ParsedHandled,
     }
